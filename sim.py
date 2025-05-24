@@ -95,7 +95,7 @@ df = st.data_editor(
     key="expense_table"
 )
 
-promo_ticket_cost = st.session_state['promo_survival_rate'] * st.session_state['avg_redeemed']
+promo_ticket_cost = promo_amount * st.session_state['promo_survival_rate']
 promo_points_cost_rate = st.number_input(
     "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
 )
