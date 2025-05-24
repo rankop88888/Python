@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import io
 
 st.set_page_config(page_title="Wheel of Fortune Promo Simulator", layout="wide")
 st.title("🎡 Wheel of Fortune Promo Simulator")
@@ -124,11 +125,10 @@ if valid_input:
         st.pyplot(fig_bar, use_container_width=False)
 
     # --- 5. EXPORT SUMMARY ---
-   st.header("6. Download/Export Summary")
+    st.header("6. Download/Export Summary")
     csv_data = summary_df.to_csv(index=False).encode('utf-8')
     st.download_button("Download Summary as CSV", csv_data, "wheel_of_fortune_summary.csv", "text/csv")
 
-    import io
     def to_excel(df):
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
