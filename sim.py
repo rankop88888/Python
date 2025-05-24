@@ -1,6 +1,8 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import io
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Casino Promo & Expense Simulator", layout="wide")
 st.title("🎰 Casino Promo Ticket & Expense Simulator")
@@ -87,6 +89,7 @@ st.header("2. Promo & Points Expense Table")
 
 st.markdown("""
 Edit the table below:  
+- **Segment:** Campaign, Tier or Segment label  
 - **Customers Rewarded:** How many customers receive a promo (ticket and/or points)
 - **Turnover per Customer:** Each customer's turnover (flow) for the promo period.
 - **Promo Ticket Face Value:** Value per ticket for each customer (can vary by row)
@@ -94,10 +97,11 @@ Edit the table below:
 """)
 
 example = pd.DataFrame({
+    "Segment": ["VIP", "Regular", "Promo A", "Promo B", "VIP"],
     "Customers Rewarded": [10, 25, 50, 100, 200],
     "Turnover per Customer": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
     "Promo Ticket Face Value": [5_000.0, 10_000.0, 15_000.0, 20_000.0, 50_000.0],
-    "Promo Points per Customer": [0, 25, 50, 100, 150],   # Points can be 0 for some campaigns
+    "Promo Points per Customer": [0, 25, 50, 100, 0],   # Points can be 0 for some campaigns
 })
 
 df = st.data_editor(
@@ -112,7 +116,7 @@ promo_points_cost_rate = st.number_input(
 )
 st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
-# --- Now everything is "per all customers"
+# --- Calculations per all customers
 df["Total Turnover"] = df["Customers Rewarded"].astype(float) * df["Turnover per Customer"].astype(float)
 df["Theoretical Gross Win"] = df["Total Turnover"] * (1 - rtp)
 df["Total Promo Tickets Value"] = df["Customers Rewarded"].astype(float) * df["Promo Ticket Face Value"].astype(float)
@@ -139,20 +143,39 @@ def color_negative_red(val):
     except Exception:
         return ''
 
+# --- Split and Show Tables ---
+summary_columns = [
+    "Segment", "Customers Rewarded", "Turnover per Customer", "Total Turnover",
+    "Promo Ticket Face Value", "Promo Points per Customer",
+    "Total Promo Tickets Value", "Total Promo Points"
+]
+
 cost_columns = [
     "Cost of Promo Tickets", "Cost of Promo Points",
     "Total Promo Cost", "Promo Cost % of TGW",
-    "Allowed Promo Budget", "Over/Under Budget"
+    "Theoretical Gross Win", "Allowed Promo Budget",
+    "Over/Under Budget", "Over Budget?", "Net Revenue After Promo"
 ]
 
-styled_df = df.style.format({
-    "Customers Rewarded": "{:,.0f}",
-    "Turnover per Customer": "{:,.0f}",
-    "Total Turnover": "{:,.0f}",
-    "Promo Ticket Face Value": "{:,.2f}",
-    "Promo Points per Customer": "{:,.0f}",
-    "Total Promo Tickets Value": "{:,.2f}",
-    "Total Promo Points": "{:,.0f}",
+summary_df = df[summary_columns]
+costs_df = df[cost_columns]
+
+st.subheader("Scenario Summary Table")
+st.dataframe(
+    summary_df.style.format({
+        "Customers Rewarded": "{:,.0f}",
+        "Turnover per Customer": "{:,.0f}",
+        "Total Turnover": "{:,.0f}",
+        "Promo Ticket Face Value": "{:,.2f}",
+        "Promo Points per Customer": "{:,.0f}",
+        "Total Promo Tickets Value": "{:,.2f}",
+        "Total Promo Points": "{:,.0f}",
+    }),
+    use_container_width=True
+)
+
+st.subheader("Cost Breakdown Table")
+styled_costs = costs_df.style.format({
     "Cost of Promo Tickets": "{:,.2f}",
     "Cost of Promo Points": "{:,.2f}",
     "Total Promo Cost": "{:,.2f}",
@@ -161,12 +184,95 @@ styled_df = df.style.format({
     "Allowed Promo Budget": "{:,.2f}",
     "Over/Under Budget": "{:,.2f}",
     "Net Revenue After Promo": "{:,.2f}"
-}).applymap(color_negative_red, subset=cost_columns)
+}).applymap(color_negative_red, subset=[
+    "Cost of Promo Tickets", "Cost of Promo Points",
+    "Total Promo Cost", "Promo Cost % of TGW",
+    "Allowed Promo Budget", "Over/Under Budget"
+])
+st.dataframe(styled_costs, use_container_width=True)
 
-st.dataframe(styled_df, use_container_width=True)
+# --- CHARTS ---
+st.header("3. Promo Analysis Charts")
+st.markdown("Visualize promo efficiency and cost structure by scenario/segment.")
+
+# Promo Cost % of TGW Chart
+fig1, ax1 = plt.subplots()
+ax1.bar(df["Segment"], df["Promo Cost % of TGW"])
+ax1.set_ylabel("Promo Cost % of TGW")
+ax1.set_title("Promo Cost % of Theoretical Gross Win by Segment")
+ax1.axhline(y=promo_budget_percent, color='r', linestyle='--', label='Allowed Budget (%)')
+ax1.legend()
+st.pyplot(fig1)
+
+# Total Promo Cost Chart
+fig2, ax2 = plt.subplots()
+ax2.bar(df["Segment"], df["Total Promo Cost"])
+ax2.set_ylabel("Total Promo Cost (€)")
+ax2.set_title("Total Promo Cost by Segment")
+st.pyplot(fig2)
+
+# --- CSV & EXCEL EXPORT ---
+st.header("4. Download Your Results")
+
+# Excel export using BytesIO
+def to_excel(bytes_df_dict):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        for name, frame in bytes_df_dict.items():
+            frame.to_excel(writer, sheet_name=name, index=False)
+        writer.save()
+    processed_data = output.getvalue()
+    return processed_data
+
+csv_summary = summary_df.to_csv(index=False).encode('utf-8')
+csv_costs = costs_df.to_csv(index=False).encode('utf-8')
+
+st.download_button(
+    "Download Scenario Summary as CSV",
+    csv_summary,
+    "promo_summary.csv",
+    "text/csv"
+)
+
+st.download_button(
+    "Download Cost Breakdown as CSV",
+    csv_costs,
+    "promo_cost_breakdown.csv",
+    "text/csv"
+)
+
+excel_bytes = to_excel({'Summary': summary_df, 'Cost Breakdown': costs_df})
+
+st.download_button(
+    "Download Both Tables as Excel (xlsx)",
+    excel_bytes,
+    "casino_promo_expense_report.xlsx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
+# --- VALIDATION ---
+st.header("5. Data Validation")
+warnings = []
+if (df["Customers Rewarded"] <= 0).any():
+    warnings.append("Warning: One or more rows have zero or negative customers rewarded.")
+if (df["Turnover per Customer"] < 0).any():
+    warnings.append("Warning: One or more rows have negative turnover per customer.")
+if (df["Total Promo Cost"] < 0).any():
+    warnings.append("Warning: Total Promo Cost negative (check your inputs).")
+if (df["Theoretical Gross Win"] <= 0).any():
+    warnings.append("Warning: Theoretical Gross Win is zero or negative for some rows (check turnover/RTP).")
+if (df["Promo Cost % of TGW"] > 100).any():
+    warnings.append("Warning: Promo cost exceeds 100% of theoretical gross win for some rows!")
+
+if warnings:
+    for w in warnings:
+        st.warning(w)
+else:
+    st.success("✅ All data looks good!")
 
 st.info(
     f"""**Definitions:**  
+    - *Segment*: Campaign or player group  
     - *Total Turnover*: Customers × turnover per customer  
     - *Promo ticket cost*: Total promo ticket value × survival rate  
     - *Promo points*: Customers × points per customer × entry price  
