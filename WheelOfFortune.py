@@ -10,57 +10,57 @@ st.title("🎡 Wheel of Fortune Promo Simulator")
 # --- 1. ARRANGE CONFIG IN 3 COLUMNS ---
 col1, col2, col3 = st.columns(3)
 
-# -- 1.1 PROMO TICKET CONFIG --
+# --- 1.1 PROMO TICKET CONFIG ---
 with col1:
-    st.subheader("Promo Ticket Option")
+    st.subheader("Promo Ticket")
     use_promo_ticket = st.checkbox("Include Promo Ticket", value=True)
+    promo_ticket_value = st.number_input("Promo Ticket Face Value (€)", value=5000.0, min_value=0.01, step=0.01, format="%.2f")
+    promo_survival = st.number_input("Promo Ticket Survival Rate (%)", value=8.0, min_value=0.0, max_value=100.0, step=0.01, format="%.2f")
     if use_promo_ticket:
-        promo_ticket_value = st.number_input("Promo Ticket Face Value (€)", value=5000.0, min_value=0.01, step=0.01, format="%.2f")
-        promo_survival = st.number_input("Promo Ticket Survival Rate (%)", value=8.0, min_value=0.0, max_value=100.0, step=0.01, format="%.2f")
         promo_exp_cost = promo_ticket_value * (promo_survival / 100.0)
-        st.markdown(f"**Promo Expected Cost:** €{promo_exp_cost:,.2f}")
+        st.markdown(f"**Promo Expected Cost per Ticket:** €{promo_exp_cost:,.2f}")
     else:
-        promo_ticket_value = 0.0
-        promo_survival = 0.0
         promo_exp_cost = 0.0
 
-# -- 1.2 WHEEL CONFIG --
+# --- 1.2 WHEEL CONFIG ---
 with col2:
-    st.subheader("Wheel/Points Option")
+    st.subheader("Wheel/Points")
     use_points = st.checkbox("Include Wheel/Points", value=True)
-    if use_points:
-        num_compartments = st.number_input("Number of Wheel Compartments", value=6, min_value=2, max_value=100, step=1)
-        default_points = [25, 50, 75, 100, 150, 200]
-        if num_compartments <= len(default_points):
-            wheel_points = default_points[:num_compartments]
-        else:
-            wheel_points = default_points + [default_points[-1]] * (num_compartments - len(default_points))
-
-        points_values = st.text_input(
-            f"Enter {int(num_compartments)} point values (comma-separated)", 
-            value=",".join(str(x) for x in wheel_points)
-        )
-        try:
-            point_values = [float(x) for x in points_values.strip().split(",")]
-            if len(point_values) != num_compartments:
-                st.error(f"Enter exactly {num_compartments} values.")
-                valid_input = False
-            else:
-                valid_input = True
-        except Exception:
-            st.error("Invalid point values. Please enter numbers, comma separated.")
-            point_values = []
-            valid_input = False
-        point_eur = st.number_input("Points Value (€ per point)", value=1.0, min_value=0.01, step=0.01, format="%.2f")
+    num_compartments = st.number_input("Number of Wheel Compartments", value=6, min_value=2, max_value=100, step=1)
+    default_points = [25, 50, 75, 100, 150, 200]
+    if num_compartments <= len(default_points):
+        wheel_points = default_points[:num_compartments]
     else:
-        num_compartments = 0
-        point_values = []
-        point_eur = 0.0
-        valid_input = True   # allow running with only promo ticket
+        wheel_points = default_points + [default_points[-1]] * (num_compartments - len(default_points))
 
-# -- 1.3 SPIN SETTINGS --
+    points_values = st.text_input(
+        f"Enter {int(num_compartments)} point values (comma-separated)", 
+        value=",".join(str(x) for x in wheel_points)
+    )
+    try:
+        point_values = [float(x) for x in points_values.strip().split(",")]
+        if len(point_values) != num_compartments:
+            st.error(f"Enter exactly {num_compartments} values.")
+            valid_input = False
+        else:
+            valid_input = True
+    except Exception:
+        st.error("Invalid point values. Please enter numbers, comma separated.")
+        point_values = []
+        valid_input = False
+
+    point_eur = st.number_input("Points Value (€ per point)", value=1.0, min_value=0.01, step=0.01, format="%.2f")
+    if use_points and point_values:
+        avg_points = np.mean(point_values)
+        avg_wheel_cost = avg_points * point_eur
+        st.markdown(f"**Avg Wheel Cost per Spin:** €{avg_wheel_cost:,.2f}")
+    else:
+        avg_points = 0.0
+        avg_wheel_cost = 0.0
+
+# --- 1.3 SPIN SETTINGS ---
 with col3:
-    st.subheader("Spin Simulation Settings")
+    st.subheader("Spin Simulation")
     num_spins = st.number_input("Spins per customer", value=1, min_value=1, max_value=100, step=1)
     num_customers = st.number_input("Customers per set", value=5, min_value=1, max_value=100_000, step=1)
     sets_per_day = st.number_input("Sets per day", value=1, min_value=1, max_value=100, step=1)
@@ -68,45 +68,42 @@ with col3:
 
 # ---- CALCULATIONS AND RESULTS ----
 if valid_input:
-    avg_points = np.mean(point_values) if use_points and point_values else 0.0
-    avg_wheel_cost = avg_points * point_eur if use_points else 0.0
+    # Wheel/Points cost per customer
+    expected_points_per_customer = num_spins * avg_points if use_points else 0.0
+    expected_points_eur_per_customer = expected_points_per_customer * point_eur if use_points else 0.0
+    # Promo ticket cost per customer (if used)
+    promo_cost_per_customer = promo_exp_cost if use_promo_ticket else 0.0
 
-    expected_per_customer = num_spins * avg_wheel_cost if use_points else 0.0
-    total_daily_cost = sets_per_day * num_customers * num_spins * avg_wheel_cost if use_points else 0.0
+    # Total cost per customer (add both if both enabled)
+    total_cost_per_customer = promo_cost_per_customer + expected_points_eur_per_customer
 
-    # Calculate combined cost logic
-    if use_points and use_promo_ticket:
-        combined_cost = avg_wheel_cost + promo_exp_cost
-    elif use_points:
-        combined_cost = avg_wheel_cost
-    elif use_promo_ticket:
-        combined_cost = promo_exp_cost
-    else:
-        combined_cost = 0.0
-
-    combined_per_customer = num_spins * combined_cost
-    combined_daily_cost = num_customers * sets_per_day * num_spins * combined_cost
+    # Per-day costs
+    total_cost_per_set = total_cost_per_customer * num_customers
+    total_cost_per_day = total_cost_per_set * sets_per_day
 
     # --- 2. SUMMARY TABLE ---
     st.header("Summary Table")
     summary_dict = {
         "Include Promo Ticket": [use_promo_ticket],
-        "Include Points/Wheel": [use_points],
+        "Promo Ticket Face Value (€)": [promo_ticket_value if use_promo_ticket else "-"],
+        "Promo Ticket Survival Rate (%)": [promo_survival if use_promo_ticket else "-"],
+        "Promo Exp. Cost per Ticket (€)": [promo_exp_cost if use_promo_ticket else "-"],
+        "Include Wheel/Points": [use_points],
         "Number of Compartments": [num_compartments if use_points else "-"],
         "Points per Compartment": [", ".join(str(int(p)) for p in point_values) if use_points else "-"],
         "Points Value (€)": [point_eur if use_points else "-"],
         "Avg Points per Spin": [avg_points if use_points else "-"],
-        "Avg Cost per Spin (€)": [avg_wheel_cost if use_points else "-"],
-        "Promo Ticket Exp. Cost (€)": [promo_exp_cost if use_promo_ticket else "-"],
-        "Combined Cost per Spin (€)": [combined_cost],
+        "Avg Wheel Cost per Spin (€)": [avg_wheel_cost if use_points else "-"],
         "Num Spins per Customer": [num_spins],
         "Customers per Set": [num_customers],
         "Sets per Day": [sets_per_day],
         "Total Spins per Day": [num_spins*num_customers*sets_per_day],
-        "Expected Cost per Customer": [expected_per_customer if use_points else "-"],
-        "Combined Cost per Customer": [combined_per_customer],
-        "Total Cost per Day (Wheel Only)": [total_daily_cost if use_points else "-"],
-        "Combined Total Cost per Day": [combined_daily_cost],
+        "Total Points per Customer": [expected_points_per_customer if use_points else "-"],
+        "Points Value per Customer (€)": [expected_points_eur_per_customer if use_points else "-"],
+        "Promo Cost per Customer (€)": [promo_cost_per_customer if use_promo_ticket else "-"],
+        "Total Cost per Customer (€)": [total_cost_per_customer],
+        "Total Cost per Set (€)": [total_cost_per_set],
+        "Total Cost per Day (€)": [total_cost_per_day]
     }
 
     summary_df = pd.DataFrame(summary_dict)
@@ -172,3 +169,4 @@ if valid_input:
 
 else:
     st.warning("Please enter a valid, comma-separated list of point values matching the number of compartments.")
+
