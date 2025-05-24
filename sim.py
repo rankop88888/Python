@@ -30,11 +30,11 @@ required_wager = promo_ticket_face_value * multiplier
 max_spins = int(required_wager // bet_size)
 st.caption(
     f"""
-    • Promo Ticket Face Value: **€{promo_ticket_face_value:,.2f}**  
-    • Bet Size: **€{bet_size:,}**  
+    • Promo Ticket Face Value: **ALL{promo_ticket_face_value:,.2f}**  
+    • Bet Size: **ALL{bet_size:,}**  
     • Wagering Multiplier: **{multiplier:,}**  
     • Number of Simulations: **{num_sims:,}**  
-    • Required Wager: **€{required_wager:,.2f}**  
+    • Required Wager: **ALL{required_wager:,.2f}**  
     • Maximum Number of Spins: **{max_spins:,}**
     """
 )
@@ -72,7 +72,7 @@ if run_btn:
     survival_rate = survival_count / num_sims
     avg_redeemed = np.mean(total_redeemed)
     st.success(f"Survival Rate: **{survival_rate*100:,.2f}%**")
-    st.write(f"Average payout for surviving promo tickets: **€{avg_redeemed:,.2f}**")
+    st.write(f"Average payout for surviving promo tickets: **ALL{avg_redeemed:,.2f}**")
     st.caption("You can now use these results in the expense table below.")
     st.session_state['promo_survival_rate'] = float(survival_rate)
     st.session_state['avg_redeemed'] = float(avg_redeemed)
@@ -120,7 +120,7 @@ df["Promo Points Given"] = [
 promo_points_cost_rate = st.number_input(
     "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
 )
-st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
+st.caption(f"Cost per point: **ALL{promo_points_cost_rate:,.2f}**")
 
 # --- Theoretical gross win per row
 df["Theoretical Gross Win"] = df["Turnover"] * (1 - rtp)
@@ -151,7 +151,7 @@ def color_negative_red(val):
     try:
         if float(val) < 0:
             return 'color: red;'
-        if '€' in str(val) or '%' in str(val):  # highlight cost/percent columns as red
+        if 'ALL' in str(val) or '%' in str(val):  # highlight cost/percent columns as red
             return 'color: red;'
     except Exception:
         return ''
@@ -166,16 +166,16 @@ cost_columns = [
 styled_df = df.style.format({
     "Turnover": "{:,.0f}",
     "Promo Tickets/Points Given": "{:,.0f}",
-    "Promo Ticket Face Value": "€{:,.2f}",
+    "Promo Ticket Face Value": "ALL{:,.2f}",
     "Promo Points Given": "{:,.0f}",
-    "Cost of Promo Tickets": "€{:,.2f}",
-    "Cost of Promo Points": "€{:,.2f}",
-    "Total Promo Cost": "€{:,.2f}",
+    "Cost of Promo Tickets": "ALL{:,.2f}",
+    "Cost of Promo Points": "ALL{:,.2f}",
+    "Total Promo Cost": "ALL{:,.2f}",
     "Promo Cost % of TGW": "{:,.2f}%",
-    "Theoretical Gross Win": "€{:,.2f}",
-    "Allowed Promo Budget": "€{:,.2f}",
-    "Over/Under Budget": "€{:,.2f}",
-    "Net Revenue After Promo": "€{:,.2f}"
+    "Theoretical Gross Win": "ALL{:,.2f}",
+    "Allowed Promo Budget": "ALL{:,.2f}",
+    "Over/Under Budget": "ALL{:,.2f}",
+    "Net Revenue After Promo": "ALL{:,.2f}"
 }).applymap(color_negative_red, subset=cost_columns)
 
 st.dataframe(styled_df, use_container_width=True)
