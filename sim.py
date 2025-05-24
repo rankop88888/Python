@@ -17,7 +17,7 @@ with st.form("sim_params"):
     with col2:
         rtp = st.number_input("RTP (e.g., 0.96 = 96%)", value=0.96, min_value=0.5, max_value=1.0, step=0.01, format="%.2f")
         num_sims = st.number_input("Number of Simulations", value=10000, min_value=100, max_value=100_000, step=100)
-        stdev = st.number_input("Volatility (Standard Deviation, payout multiplier)", value=5.0, min_value=0.5, max_value=25.0, step=0.1)
+        stdev = st.number_input("Volatility (Standard Deviation, payout multiplier)", value=3.0, min_value=0.5, max_value=10.0, step=0.1)
     run_btn = st.form_submit_button("Run Promo Simulation")
 
 required_wager = promo_amount * multiplier
@@ -43,8 +43,11 @@ def get_spin_outcome(rtp):
     return np.random.choice(payouts, p=weights)
 
 if run_btn:
+    progress_bar = st.progress(0, text="Running simulations...")
     survival_count = 0
     total_redeemed = []
+    # For speed, only update every 1% (not every loop)
+    update_every = max(1, int(num_sims // 100))
     for sim in range(int(num_sims)):
         balance = promo_amount
         total_wagered = 0
@@ -57,6 +60,10 @@ if run_btn:
             total_redeemed.append(balance)
         else:
             total_redeemed.append(0)
+        if sim % update_every == 0 or sim == num_sims - 1:
+            percent = (sim + 1) / num_sims
+            progress_bar.progress(min(percent, 1.0), text=f"Simulations: {percent:.0%}")
+
     survival_rate = survival_count / num_sims
     avg_redeemed = np.mean(total_redeemed)
     st.success(f"Survival Rate: **{survival_rate*100:,.2f}%**")
