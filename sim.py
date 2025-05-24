@@ -98,11 +98,11 @@ df = st.data_editor(
 
 # Cost calculations: if simulation NOT run, ticket cost = 0
 if 'promo_survival_rate' in st.session_state:
-    promo_ticket_cost = promo_amount * st.session_state['promo_survival_rate']
+    shown_survival_rate = st.session_state['promo_survival_rate']
+    st.caption(f"Current survival rate from simulator: **{shown_survival_rate:.2%}**")
 else:
-    promo_ticket_cost = 0
-else:
-    promo_ticket_cost = promo_amount * st.session_state['promo_survival_rate']
+    shown_survival_rate = 0.08
+    st.caption("Current survival rate (default): **8%** (run the simulator for a real result)")
 
 promo_points_cost_rate = st.number_input(
     "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
