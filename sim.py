@@ -97,7 +97,9 @@ df = st.data_editor(
 )
 
 # Cost calculations: if simulation NOT run, ticket cost = 0
-if 'promo_survival_rate' not in st.session_state or not run_btn:
+if 'promo_survival_rate' in st.session_state:
+    promo_ticket_cost = promo_amount * st.session_state['promo_survival_rate']
+else:
     promo_ticket_cost = 0
 else:
     promo_ticket_cost = promo_amount * st.session_state['promo_survival_rate']
