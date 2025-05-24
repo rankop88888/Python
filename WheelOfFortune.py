@@ -134,7 +134,8 @@ import io
 # ... inside the `if valid_input:` block, after CSV export...
 
     # --- 6. EXPORT TO EXCEL (.xlsx) ---
-    def to_excel(df):
+
+def to_excel(df):
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df.to_excel(writer, index=False, sheet_name='Summary')
