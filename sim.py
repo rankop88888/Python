@@ -90,17 +90,17 @@ st.header("2. Promo & Points Expense Table")
 
 st.markdown("""
 Edit the table below:  
-- **No. of Tickets/Points:** For each scenario, enter tickets (points will auto-match; you can set points to 0 if needed).
-- **Promo Ticket Face Value:** You can vary per row.
-- **Promo Points Given:** Can be zero for ticket-only scenarios.
+- **Customers Rewarded:** How many customers receive a promo (ticket and/or points)
+- **Promo Ticket Face Value:** Value per ticket for each customer (can vary by row)
+- **Promo Points Given:** Points per customer (can be zero for ticket-only scenarios)
 """)
 
 # Example input table
 example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
-    "No. of Tickets/Points": [10, 25, 50, 100, 200],
+    "Customers Rewarded": [10, 25, 50, 100, 200],
     "Promo Ticket Face Value": [5_000.0, 10_000.0, 15_000.0, 20_000.0, 50_000.0],
-    "Promo Points Given": [0, 25, 50, 100, 0],   # Points can be 0
+    "Promo Points per Customer": [0, 25, 50, 100, 0],   # Points can be 0 for some campaigns
 })
 
 df = st.data_editor(
@@ -110,27 +110,22 @@ df = st.data_editor(
     key="expense_table"
 )
 
-# Enforce: Promo Points Given = No. of Tickets/Points (unless 0)
-df["Promo Points Given"] = [
-    pts if pts == 0 else tix
-    for tix, pts in zip(df["No. of Tickets/Points"], df["Promo Points Given"])
-]
-
 promo_points_cost_rate = st.number_input(
-    "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
+    "Cost per point (e.g., 1 EUR per point)", value=1.0, step=0.1, format="%.2f"
 )
 st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
 # --- Theoretical gross win per row
 df["Theoretical Gross Win"] = df["Turnover"] * (1 - rtp)
 
-# --- Cost of promo tickets and points
+# --- Cost calculations using number of customers rewarded
 df["Cost of Promo Tickets"] = (
-    df["No. of Tickets/Points"].astype(float)
+    df["Customers Rewarded"].astype(float)
     * df["Promo Ticket Face Value"].astype(float)
     * current_survival_rate
 )
-df["Cost of Promo Points"] = df["Promo Points Given"].astype(float) * promo_points_cost_rate
+df["Total Promo Points"] = df["Customers Rewarded"].astype(float) * df["Promo Points per Customer"].astype(float)
+df["Cost of Promo Points"] = df["Total Promo Points"] * promo_points_cost_rate
 df["Total Promo Cost"] = df["Cost of Promo Tickets"] + df["Cost of Promo Points"]
 df["Promo Cost % of TGW"] = 100 * df["Total Promo Cost"] / df["Theoretical Gross Win"]
 
@@ -160,9 +155,10 @@ cost_columns = [
 
 styled_df = df.style.format({
     "Turnover": "{:,.0f}",
-    "No. of Tickets/Points": "{:,.0f}",
+    "Customers Rewarded": "{:,.0f}",
     "Promo Ticket Face Value": "{:,.2f}",
-    "Promo Points Given": "{:,.0f}",
+    "Promo Points per Customer": "{:,.0f}",
+    "Total Promo Points": "{:,.0f}",
     "Cost of Promo Tickets": "{:,.2f}",
     "Cost of Promo Points": "{:,.2f}",
     "Total Promo Cost": "{:,.2f}",
@@ -177,8 +173,8 @@ st.dataframe(styled_df, use_container_width=True)
 
 st.info(
     f"""**Definitions:**  
-    - *Promo ticket cost*: Tickets × face value × survival rate  
-    - *Promo points*: Count × entry price (or 0 if blank)  
+    - *Promo ticket cost*: Customers × face value × survival rate  
+    - *Promo points*: Customers × points per customer × entry price  
     - *Promo cost %*: How much of theoretical gross win is spent on promotions  
     - *Allowed Promo Budget*: User-entered % × TGW  
     - *Net Revenue*: Turnover minus all promo costs  
