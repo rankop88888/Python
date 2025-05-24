@@ -12,20 +12,24 @@ with st.form("sim_params"):
     col1, col2 = st.columns(2)
     with col1:
         promo_amount = st.number_input("Promo Ticket Amount", value=5000, min_value=100, step=100)
+        st.caption(f"Promo Ticket Amount: {promo_amount:,}")
         bet_size = st.number_input("Bet Size", value=500, min_value=1, step=1)
+        st.caption(f"Bet Size: {bet_size:,}")
         multiplier = st.number_input("Wagering Multiplier (x)", value=40, min_value=1, step=1)
+        st.caption(f"Wagering Multiplier: {multiplier:,}")
     with col2:
         rtp = st.number_input("RTP (e.g., 0.96 = 96%)", value=0.96, min_value=0.5, max_value=1.0, step=0.01, format="%.2f")
         num_sims = st.number_input("Number of Simulations", value=10000, min_value=100, max_value=100_000, step=100)
+        st.caption(f"Number of Simulations: {num_sims:,}")
         stdev = st.number_input("Volatility (Standard Deviation, payout multiplier)", value=3.0, min_value=0.5, max_value=10.0, step=0.1)
+        st.caption(f"Volatility: {stdev:,.1f}")
     st.caption("Payout Table (per spin): Most spins pay zero. This is a synthetic slot payout model.")
     run_btn = st.form_submit_button("Run Promo Simulation")
 
 def get_spin_outcome(rtp):
-    # Use a realistic slot: most spins lose, some small wins, rare big win
     payouts = np.array([0, 0.2, 1, 3, 10, 50])
     weights = np.array([0.75, 0.12, 0.08, 0.04, 0.009, 0.001])
-    weights = weights / weights.sum()  # Ensure weights sum to 1
+    weights = weights / weights.sum()
     current_rtp = np.sum(payouts * weights)
     scale = rtp / current_rtp
     payouts = payouts * scale
@@ -43,8 +47,6 @@ if run_btn:
             outcome = get_spin_outcome(rtp) * bet_size
             balance = balance - bet_size + outcome
             total_wagered += bet_size
-        # If survived, cost is the final balance left
-        # If not, cost is zero
         if total_wagered >= required_wager and balance > 0:
             survival_count += 1
             total_redeemed.append(balance)
@@ -52,11 +54,10 @@ if run_btn:
             total_redeemed.append(0)
     survival_rate = survival_count / num_sims
     avg_redeemed = np.mean(total_redeemed)
-    st.success(f"Survival Rate: **{survival_rate*100:.2f}%**")
+    st.success(f"Survival Rate: **{survival_rate*100:,.2f}%**")
     st.write(f"Average payout for surviving promo tickets: **€{avg_redeemed:,.2f}**")
     st.caption("You can now use these results in the expense table below.")
 
-    # Store for use in expense table
     st.session_state['promo_survival_rate'] = survival_rate
     st.session_state['avg_redeemed'] = avg_redeemed
 
@@ -75,10 +76,9 @@ Edit the table below:
 - **Promo Points Given:** Points awarded (not wagered, cost is full value)
 """)
 
-# Example data: all columns same length!
 example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000, 750_000, 1_000_000],
-    "Promo Tickets Given": [5000, 10000, 20000, 25000, 50000],
+    "Promo Tickets Given": [5_000, 10_000, 20_000, 25_000, 50_000],
     "Promo Points Given": [25, 50, 75, 100, 150]
 })
 
@@ -89,12 +89,11 @@ df = st.data_editor(
     key="expense_table"
 )
 
-# Calculate expenses
 promo_ticket_cost = st.session_state['promo_survival_rate'] * st.session_state['avg_redeemed']
 promo_points_cost_rate = st.number_input(
-    "Cost per point (e.g., 1 EUR per 1 point)",
-    value=1.0, step=0.1, format="%.4f"
+    "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
 )
+st.caption(f"Cost per point: €{promo_points_cost_rate:,.2f}")
 
 df["Cost of Promo Tickets"] = df["Promo Tickets Given"] * promo_ticket_cost
 df["Cost of Promo Points"] = df["Promo Points Given"] * promo_points_cost_rate
@@ -102,7 +101,6 @@ df["Total Promo Cost"] = df["Cost of Promo Tickets"] + df["Cost of Promo Points"
 df["Promo Cost % of Turnover"] = 100 * df["Total Promo Cost"] / df["Turnover"]
 df["Net Revenue After Promo"] = df["Turnover"] - df["Total Promo Cost"]
 
-# Pretty number formatting!
 styled_df = df.style.format({
     "Turnover": "{:,.0f}",
     "Promo Tickets Given": "{:,.0f}",
@@ -110,7 +108,7 @@ styled_df = df.style.format({
     "Cost of Promo Tickets": "€{:,.2f}",
     "Cost of Promo Points": "€{:,.2f}",
     "Total Promo Cost": "€{:,.2f}",
-    "Promo Cost % of Turnover": "{:.2f}%",
+    "Promo Cost % of Turnover": "{:,.2f}%",
     "Net Revenue After Promo": "€{:,.2f}"
 })
 
