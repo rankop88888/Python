@@ -80,8 +80,8 @@ Edit the table below:
 # Example data
 example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000],
-    "Promo Tickets Given": [10, 20, 50],
-    "Promo Points Given": [1000, 2500, 4000]
+    "Promo Tickets Given": [5000, 10000, 20000, 25000, 50000],
+    "Promo Points Given": [25, 50, 75, 100, 150]
 })
 
 df = st.data_editor(
@@ -93,7 +93,7 @@ df = st.data_editor(
 
 # Calculate expenses
 promo_ticket_cost = st.session_state['promo_survival_rate'] * st.session_state['avg_redeemed']
-promo_points_cost_rate = st.number_input("Cost per point (e.g., 1 EUR per 1,000 points)", value=0.001, step=0.0001, format="%.4f")
+promo_points_cost_rate = st.number_input("Cost per point (e.g., 1 EUR per 1 point)", value=1, step=0.1, format="%.4f")
 
 df["Cost of Promo Tickets"] = df["Promo Tickets Given"] * promo_ticket_cost
 df["Cost of Promo Points"] = df["Promo Points Given"] * promo_points_cost_rate
@@ -103,7 +103,18 @@ df["Promo Cost % of Turnover"] = 100 * df["Total Promo Cost"] / df["Turnover"]
 # Optional: Net Revenue After Promo
 df["Net Revenue After Promo"] = df["Turnover"] - df["Total Promo Cost"]
 
-st.dataframe(df, use_container_width=True)
+styled_df = df.style.format({
+    "Turnover": "{:,.0f}",
+    "Promo Tickets Given": "{:,.0f}",
+    "Promo Points Given": "{:,.0f}",
+    "Cost of Promo Tickets": "€{:,.2f}",
+    "Cost of Promo Points": "€{:,.2f}",
+    "Total Promo Cost": "€{:,.2f}",
+    "Promo Cost % of Turnover": "{:.2f}%",
+    "Net Revenue After Promo": "€{:,.2f}"
+})
+
+st.dataframe(styled_df, use_container_width=True)
 
 st.info(
     f"""**Definitions:**  
