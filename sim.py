@@ -17,7 +17,7 @@ st.header("1. Promo Ticket Survival Simulation")
 with st.form("sim_params"):
     col1, col2 = st.columns(2)
     with col1:
-        promo_ticket_face_value = st.number_input("Promo Ticket Face Value (ALL)", value=5000.0, min_value=0.01, step=0.01, format="%.2f")
+        promo_ticket_face_value = st.number_input("Promo Ticket Face Value (ALL)", value=5000, min_value=0.01, step=0.01, format="%.2f")
         bet_size = st.number_input("Bet Size", value=100, min_value=1, step=1)
         multiplier = st.number_input("Wagering Multiplier (x)", value=40, min_value=1, step=1)
     with col2:
