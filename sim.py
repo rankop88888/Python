@@ -82,10 +82,8 @@ if 'promo_survival_rate' in st.session_state:
     current_survival_rate = st.session_state['promo_survival_rate']
     st.caption(f"Current survival rate from simulator: **{current_survival_rate:.2%}**")
 else:
-    current_survival_rate = 0.08  # 8% default
+    current_survival_rate = 0.08
     st.info("**Current survival rate (default): 8%**\n\n_Run the simulator for a real result!_")
-
-promo_ticket_cost = promo_amount * current_survival_rate
 
 # --- EXPENSE SCENARIO TABLE ---
 st.header("2. Promo & Points Expense Table")
@@ -115,7 +113,7 @@ promo_points_cost_rate = st.number_input(
 )
 st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
-df["Cost of Promo Tickets"] = df["Promo Tickets Given"].astype(float) * promo_ticket_cost
+df["Cost of Promo Tickets"] = df["Promo Tickets Given"].astype(float) * promo_amount * current_survival_rate
 df["Cost of Promo Points"] = df["Promo Points Given"].astype(float) * promo_points_cost_rate
 df["Total Promo Cost"] = df["Cost of Promo Tickets"] + df["Cost of Promo Points"]
 df["Promo Cost % of Turnover"] = 100 * df["Total Promo Cost"] / df["Turnover"]
