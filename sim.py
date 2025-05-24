@@ -84,7 +84,6 @@ Edit the table below:
     "Promo Points Given": [25, 50, 75, 100, 150]
 })
 
-})
 
 df = st.data_editor(
     example,
