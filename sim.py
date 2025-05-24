@@ -97,8 +97,8 @@ Edit the table below:
 """)
 
 example = pd.DataFrame({
-    "Segment": ["VIP", "Regular", "Promo A", "Promo B", "VIP"],
-    "Customers Rewarded": [10, 25, 50, 100, 200],
+    "Segment": [ "Regular", "Promo A", "Promo B", "Promo B", "VIP"],
+    "Customers Rewarded": [100, 75, 50, 25, 10],
     "Turnover per Customer": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
     "Promo Ticket Face Value": [5_000.0, 10_000.0, 15_000.0, 20_000.0, 50_000.0],
     "Promo Points per Customer": [0, 25, 50, 100, 150],   # Points can be 0 for some campaigns
