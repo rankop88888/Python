@@ -12,19 +12,27 @@ with st.form("sim_params"):
     col1, col2 = st.columns(2)
     with col1:
         promo_amount = st.number_input("Promo Ticket Amount", value=5000, min_value=100, step=100)
-        st.caption(f"Promo Ticket Amount: {promo_amount:,}")
         bet_size = st.number_input("Bet Size", value=500, min_value=1, step=1)
-        st.caption(f"Bet Size: {bet_size:,}")
         multiplier = st.number_input("Wagering Multiplier (x)", value=40, min_value=1, step=1)
-        st.caption(f"Wagering Multiplier: {multiplier:,}")
     with col2:
         rtp = st.number_input("RTP (e.g., 0.96 = 96%)", value=0.96, min_value=0.5, max_value=1.0, step=0.01, format="%.2f")
         num_sims = st.number_input("Number of Simulations", value=10000, min_value=100, max_value=100_000, step=100)
-        st.caption(f"Number of Simulations: {num_sims:,}")
         stdev = st.number_input("Volatility (Standard Deviation, payout multiplier)", value=3.0, min_value=0.5, max_value=10.0, step=0.1)
-        st.caption(f"Volatility: {stdev:,.1f}")
-    st.caption("Payout Table (per spin): Most spins pay zero. This is a synthetic slot payout model.")
     run_btn = st.form_submit_button("Run Promo Simulation")
+
+# --- Show all important numbers with thousands separator
+required_wager = promo_amount * multiplier
+max_spins = int(required_wager // bet_size)
+st.caption(
+    f"""
+    • Promo Ticket Amount: **{promo_amount:,}**  
+    • Bet Size: **{bet_size:,}**  
+    • Wagering Multiplier: **{multiplier:,}**  
+    • Number of Simulations: **{num_sims:,}**  
+    • Required Wager: **{required_wager:,}**  
+    • Maximum Number of Spins: **{max_spins:,}**
+    """
+)
 
 def get_spin_outcome(rtp):
     payouts = np.array([0, 0.2, 1, 3, 10, 50])
@@ -36,8 +44,6 @@ def get_spin_outcome(rtp):
     return np.random.choice(payouts, p=weights)
 
 if run_btn:
-    required_wager = promo_amount * multiplier
-    max_spins = int(required_wager // bet_size)
     survival_count = 0
     total_redeemed = []
     for sim in range(int(num_sims)):
@@ -93,7 +99,7 @@ promo_ticket_cost = st.session_state['promo_survival_rate'] * st.session_state['
 promo_points_cost_rate = st.number_input(
     "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
 )
-st.caption(f"Cost per point: €{promo_points_cost_rate:,.2f}")
+st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
 df["Cost of Promo Tickets"] = df["Promo Tickets Given"] * promo_ticket_cost
 df["Cost of Promo Points"] = df["Promo Points Given"] * promo_points_cost_rate
