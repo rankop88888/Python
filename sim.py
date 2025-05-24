@@ -97,8 +97,9 @@ Edit the table below:
 
 example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000, 750_000, 1_000_000],
-    "Promo Tickets Given": [25, 50, 100, 500, 1_000],
-    "Promo Points Given": [25, 50, 75, 100, 150]
+    "Promo Tickets Given": [10, 25, 50, 100, 250],
+    "Promo Ticket Face Value": [5, 10, 20, 25, 50],  # NEW COLUMN
+    "Promo Points Given": [2_500, 5_000, 10_000, 20_000, 40_000]
 })
 
 df = st.data_editor(
@@ -113,7 +114,11 @@ promo_points_cost_rate = st.number_input(
 )
 st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
-df["Cost of Promo Tickets"] = df["Promo Tickets Given"].astype(float) * promo_amount * current_survival_rate
+df["Cost of Promo Tickets"] = (
+    df["Promo Tickets Given"].astype(float)
+    * df["Promo Ticket Face Value"].astype(float)
+    * current_survival_rate
+)
 df["Cost of Promo Points"] = df["Promo Points Given"].astype(float) * promo_points_cost_rate
 df["Total Promo Cost"] = df["Cost of Promo Tickets"] + df["Cost of Promo Points"]
 df["Promo Cost % of Turnover"] = 100 * df["Total Promo Cost"] / df["Turnover"]
