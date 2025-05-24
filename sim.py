@@ -220,7 +220,7 @@ def to_excel(bytes_df_dict):
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for name, frame in bytes_df_dict.items():
             frame.to_excel(writer, sheet_name=name, index=False)
-        writer.save()
+        # DO NOT call writer.save() here!
     processed_data = output.getvalue()
     return processed_data
 
