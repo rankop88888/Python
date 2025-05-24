@@ -17,7 +17,7 @@ with st.form("sim_params"):
     with col2:
         rtp = st.number_input("RTP (e.g., 0.96 = 96%)", value=0.96, min_value=0.5, max_value=1.0, step=0.01, format="%.2f")
         num_sims = st.number_input("Number of Simulations", value=10000, min_value=100, max_value=100_000, step=100)
-        stdev = st.number_input("Volatility (Standard Deviation, payout multiplier)", value=3.0, min_value=0.5, max_value=10.0, step=0.1)
+        stdev = st.number_input("Volatility (Standard Deviation, payout multiplier)", value=5.0, min_value=0.5, max_value=25.0, step=0.1)
     run_btn = st.form_submit_button("Run Promo Simulation")
 
 required_wager = promo_amount * multiplier
