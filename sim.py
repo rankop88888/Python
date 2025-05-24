@@ -117,9 +117,10 @@ df["Promo Cost % of Turnover"] = 100 * df["Total Promo Cost"] / df["Turnover"]
 
 # --- THEORETICAL GROSS WIN & ALLOWED BUDGET ---
 promo_budget_percent = st.number_input(
-    "Promo Budget (% of Theoretical Gross Win)", value=30.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
+    "Promo Budget (% of Theoretical Gross Win)", value=20.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
 )
 st.caption(f"Promo cost budget: **{promo_budget_percent:.2f}%** of Theoretical Gross Win (TGW)")
+st.info("**Current survival rate (default): 8%**\n\n_Run the simulator for a real result!_")
 
 df["Theoretical Gross Win"] = df["Turnover"] * (1 - rtp)
 df["Allowed Promo Budget"] = df["Theoretical Gross Win"] * promo_budget_percent / 100
