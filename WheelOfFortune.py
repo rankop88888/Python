@@ -12,17 +12,21 @@ col1, col2 = st.columns(2)
 # -- 1. PROMO CONFIGURATION --
 with col1:
     st.subheader("Reward Type")
-    use_promo_ticket = st.checkbox("Use Promo Ticket (Wheel = Promo Value on all compartments)", value=True)
+    use_promo_ticket = st.checkbox("Use Promo Ticket Wheel", value=True)
     promo_survival = st.number_input("Promo Ticket Survival Rate (%)", value=8.0, min_value=0.0, max_value=100.0, step=0.01, format="%.2f")
-    reward_value = st.number_input("Promo Ticket Face Value (or Point Value) (€)", value=100.0, min_value=0.01, step=0.01, format="%.2f")
 
 # -- 2. WHEEL CONFIGURATION --
 with col2:
-    st.subheader("Wheel Configuration (Points/Promo)")
-    num_compartments = st.number_input("Number of Wheel Compartments", value=6, min_value=2, max_value=100, step=1)
+    st.subheader("Wheel Configuration")
+    num_compartments = st.number_input("Number of Wheel Compartments", value=5, min_value=2, max_value=100, step=1)
+    PROMO_VALUES = [2500, 5000, 7500, 10000, 15000]
     if use_promo_ticket:
-        point_values = [reward_value] * int(num_compartments)
+        if num_compartments <= len(PROMO_VALUES):
+            point_values = PROMO_VALUES[:num_compartments]
+        else:
+            point_values = PROMO_VALUES + [PROMO_VALUES[-1]] * (int(num_compartments) - len(PROMO_VALUES))
         valid_input = True
+        st.markdown(f"**Wheel Values:** {', '.join(str(int(p)) for p in point_values)}")
     else:
         default_points = [25, 50, 75, 100, 150, 200]
         if num_compartments <= len(default_points):
@@ -30,7 +34,7 @@ with col2:
         else:
             wheel_points = default_points + [default_points[-1]] * (int(num_compartments) - len(default_points))
         points_values = st.text_input(
-            f"Enter {int(num_compartments)} point values (comma-separated)", 
+            f"Enter {int(num_compartments)} point values (comma-separated)",
             value=",".join(str(x) for x in wheel_points)
         )
         try:
@@ -53,17 +57,14 @@ st.caption(f"**Total spins per day:** {num_spins*num_customers*sets_per_day:,}")
 
 # --- CALCULATIONS ---
 if valid_input:
+    avg_points = np.mean(point_values)
     if use_promo_ticket:
-        # Each spin gives the promo ticket value, but cost is multiplied by survival rate
-        avg_points = reward_value
-        avg_points_cost = avg_points
-        cost_per_customer = num_spins * avg_points * (promo_survival / 100.0)
-        cost_type = f"Promo Ticket: {num_spins}x €{reward_value:,.2f} × {promo_survival:.2f}% survival"
+        cost_per_spin = avg_points * (promo_survival / 100.0)
+        cost_type = f"Promo Wheel Avg: {avg_points:,.0f} × {promo_survival:.2f}% survival"
     else:
-        avg_points = np.mean(point_values)
-        avg_points_cost = avg_points
-        cost_per_customer = num_spins * avg_points_cost
-        cost_type = f"Wheel Avg: {avg_points:.2f} × €1.00 × {num_spins} spins"
+        cost_per_spin = avg_points
+        cost_type = f"Wheel Avg: {avg_points:.2f}"
+    cost_per_customer = num_spins * cost_per_spin
     total_cost_per_set = cost_per_customer * num_customers
     total_cost_per_day = total_cost_per_set * sets_per_day
 
@@ -71,7 +72,8 @@ if valid_input:
     st.header("Summary Table")
     summary_dict = {
         "Reward Type": [cost_type],
-        "Avg Points/Promo Value per Spin": [avg_points],
+        "Wheel Values": [", ".join(str(int(p)) for p in point_values)],
+        "Avg Value per Spin": [avg_points],
         "Promo Survival Rate (%)": [promo_survival if use_promo_ticket else "-"],
         "Cost per Customer (€)": [cost_per_customer],
         "Customers per Set": [num_customers],
