@@ -12,7 +12,7 @@ col1, col2, col3 = st.columns(3)
 # -- 1.1 PROMO TICKET CONFIG --
 with col1:
     st.subheader("Promo Ticket Option")
-    promo_ticket_value = st.number_input("Promo Ticket Face Value (€)", value=100.0, min_value=0.01, step=0.01, format="%.2f")
+    promo_ticket_value = st.number_input("Promo Ticket Face Value ()", value=5000.0, min_value=0.01, step=0.01, format="%.2f")
     promo_survival = st.number_input("Promo Ticket Survival Rate (%)", value=8.0, min_value=0.0, max_value=100.0, step=0.01, format="%.2f")
     promo_exp_cost = promo_ticket_value * (promo_survival / 100.0)
     st.markdown(f"**Promo Expected Cost:** €{promo_exp_cost:,.2f}")
@@ -49,7 +49,7 @@ with col2:
 with col3:
     st.subheader("Spin Simulation Settings")
     num_spins = st.number_input("Spins per customer", value=1, min_value=1, max_value=100, step=1)
-    num_customers = st.number_input("Customers per set", value=100, min_value=1, max_value=100_000, step=1)
+    num_customers = st.number_input("Customers per set", value=5, min_value=1, max_value=100_000, step=1)
     sets_per_day = st.number_input("Sets per day", value=1, min_value=1, max_value=100, step=1)
     st.caption(f"**Total spins per day:** {num_spins*num_customers*sets_per_day:,}")
 
