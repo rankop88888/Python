@@ -4,7 +4,12 @@ import pandas as pd
 
 st.set_page_config(page_title="Casino Promo & Expense Simulator", layout="wide")
 st.title("🎰 Casino Promo Ticket & Expense Simulator")
-st.info("**Default: Until you run the simulator, the calculator assumes an 8% promo ticket survival rate.**\n\n_Run the simulator for your real value!_")
+
+# --- EMPHASIZED DEFAULT NOTICE AT THE TOP ---
+st.info(
+    "**Default: Calculator uses an 8% promo ticket survival rate until you run the simulator.**\n\n"
+    "_Run the simulator below for your real result!_"
+)
 
 # --- PROMO SURVIVAL SIMULATION ---
 st.header("1. Promo Ticket Survival Simulation")
@@ -71,6 +76,17 @@ if run_btn:
     st.caption("You can now use these results in the expense table below.")
     st.session_state['promo_survival_rate'] = float(survival_rate)
     st.session_state['avg_redeemed'] = float(avg_redeemed)
+
+# --- CALCULATION: SURVIVAL RATE FOR CALCULATOR ---
+if 'promo_survival_rate' in st.session_state:
+    current_survival_rate = st.session_state['promo_survival_rate']
+    st.caption(f"Current survival rate from simulator: **{current_survival_rate:.2%}**")
+else:
+    current_survival_rate = 0.08  # 8% default
+    st.info("**Current survival rate (default): 8%**\n\n_Run the simulator for a real result!_")
+
+promo_ticket_cost = promo_amount * current_survival_rate
+
 # --- EXPENSE SCENARIO TABLE ---
 st.header("2. Promo & Points Expense Table")
 
@@ -94,22 +110,11 @@ df = st.data_editor(
     key="expense_table"
 )
 
-# --- Use last simulation result if available, else use 8% default survival rate ---
-if 'promo_survival_rate' in st.session_state:
-    current_survival_rate = st.session_state['promo_survival_rate']
-    st.caption(f"Current survival rate from simulator: **{current_survival_rate:.2%}**")
-else:
-    current_survival_rate = 0.08  # 8% default
-    st.caption("Current survival rate (default): **8%** (run the simulator for a real result)")
-
-promo_ticket_cost = promo_amount * current_survival_rate
-
 promo_points_cost_rate = st.number_input(
     "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
 )
 st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
-# --- Calculator columns ---
 df["Cost of Promo Tickets"] = df["Promo Tickets Given"].astype(float) * promo_ticket_cost
 df["Cost of Promo Points"] = df["Promo Points Given"].astype(float) * promo_points_cost_rate
 df["Total Promo Cost"] = df["Cost of Promo Tickets"] + df["Cost of Promo Points"]
@@ -117,10 +122,9 @@ df["Promo Cost % of Turnover"] = 100 * df["Total Promo Cost"] / df["Turnover"]
 
 # --- THEORETICAL GROSS WIN & ALLOWED BUDGET ---
 promo_budget_percent = st.number_input(
-    "Promo Budget (% of Theoretical Gross Win)", value=20.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
+    "Promo Budget (% of Theoretical Gross Win)", value=30.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
 )
 st.caption(f"Promo cost budget: **{promo_budget_percent:.2f}%** of Theoretical Gross Win (TGW)")
-
 
 df["Theoretical Gross Win"] = df["Turnover"] * (1 - rtp)
 df["Allowed Promo Budget"] = df["Theoretical Gross Win"] * promo_budget_percent / 100
@@ -128,7 +132,6 @@ df["Over/Under Budget"] = df["Total Promo Cost"] - df["Allowed Promo Budget"]
 df["Over Budget?"] = df["Over/Under Budget"].apply(lambda x: "Yes" if x > 0 else "No")
 df["Net Revenue After Promo"] = df["Turnover"] - df["Total Promo Cost"]
 
-# --- Format DataFrame ---
 styled_df = df.style.format({
     "Turnover": "{:,.0f}",
     "Promo Tickets Given": "{:,.0f}",
