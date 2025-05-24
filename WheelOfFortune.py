@@ -12,7 +12,7 @@ col1, col2, col3 = st.columns(3)
 # -- 1.1 PROMO TICKET CONFIG --
 with col1:
     st.subheader("Promo Ticket Option")
-    promo_ticket_value = st.number_input("Promo Ticket Face Value ()", value=5000.0, min_value=0.01, step=0.01, format="%.2f")
+    promo_ticket_value = st.number_input("Promo Ticket Face Value (€)", value=5000.0, min_value=0.01, step=0.01, format="%.2f")
     promo_survival = st.number_input("Promo Ticket Survival Rate (%)", value=8.0, min_value=0.0, max_value=100.0, step=0.01, format="%.2f")
     promo_exp_cost = promo_ticket_value * (promo_survival / 100.0)
     st.markdown(f"**Promo Expected Cost:** €{promo_exp_cost:,.2f}")
@@ -53,8 +53,7 @@ with col3:
     sets_per_day = st.number_input("Sets per day", value=1, min_value=1, max_value=100, step=1)
     st.caption(f"**Total spins per day:** {num_spins*num_customers*sets_per_day:,}")
 
-# ---- REST OF YOUR SCRIPT GOES HERE ----
-
+# ---- CALCULATIONS AND RESULTS ----
 if valid_input:
     avg_points = np.mean(point_values)
     avg_wheel_cost = avg_points * point_eur
@@ -105,27 +104,24 @@ if valid_input:
         st.write(f"- Min: {np.min(total_points_list):,.0f} points, Max: {np.max(total_points_list):,.0f} points")
 
     # --- 4. PIE CHART & BAR CHART ---
-    s# --- 4. PIE CHART & BAR CHART ---
-st.header("Wheel Distribution Visualization")
+    st.header("Wheel Distribution Visualization")
+    chart_cols = st.columns(2)
 
-chart_cols = st.columns(2)
+    with chart_cols[0]:
+        pie_labels = [f"{int(p)}" for p in point_values]
+        pie_counts = [1]*len(point_values)
+        fig_pie, ax_pie = plt.subplots(figsize=(4, 4))
+        ax_pie.pie(pie_counts, labels=pie_labels, autopct=lambda pct: f"{pct:.1f}%")
+        ax_pie.set_title("Wheel Compartment Probabilities", fontsize=10)
+        st.pyplot(fig_pie, use_container_width=False)
 
-with chart_cols[0]:
-    pie_labels = [f"{int(p)}" for p in point_values]
-    pie_counts = [1]*len(point_values)
-    fig_pie, ax_pie = plt.subplots(figsize=(4, 4))   # <-- smaller size
-    ax_pie.pie(pie_counts, labels=pie_labels, autopct=lambda pct: f"{pct:.1f}%")
-    ax_pie.set_title("Wheel Compartment Probabilities")
-    st.pyplot(fig_pie, use_container_width=False)
-
-with chart_cols[1]:
-    fig_bar, ax_bar = plt.subplots(figsize=(4, 4))   # <-- smaller size
-    ax_bar.bar(pie_labels, point_values)
-    ax_bar.set_ylabel("Points per Compartment")
-    ax_bar.set_xlabel("Wheel Compartment")
-    ax_bar.set_title("Points Distribution on Wheel")
-    st.pyplot(fig_bar, use_container_width=False)
-
+    with chart_cols[1]:
+        fig_bar, ax_bar = plt.subplots(figsize=(4, 4))
+        ax_bar.bar(pie_labels, point_values)
+        ax_bar.set_ylabel("Points per Compartment", fontsize=10)
+        ax_bar.set_xlabel("Wheel Compartment", fontsize=10)
+        ax_bar.set_title("Points Distribution on Wheel", fontsize=10)
+        st.pyplot(fig_bar, use_container_width=False)
 
     # --- 5. EXPORT SUMMARY ---
     st.header("6. Download/Export Summary")
