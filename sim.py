@@ -99,7 +99,7 @@ example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000, 750_000, 1_000_000],
     "Promo Tickets Given": [10, 25, 50, 100, 250],
     "Promo Ticket Face Value": [5_000, 10_000, 150_000, 200_000, 500_000],  # NEW COLUMN
-    "Promo Points Given": [2_500, 5_000, 10_000, 20_000, 40_000]
+    "Promo Points Given": [25, 50, 100, 150, 200]
 })
 
 df = st.data_editor(
