@@ -127,7 +127,7 @@ df["Theoretical Gross Win"] = df["Turnover"] * (1 - rtp)
 
 # --- Cost of promo tickets and points
 df["Cost of Promo Tickets"] = (
-    df["Promo Tickets/Points Given"].astype(float)
+    df["No.Promo Tickets/Points Given"].astype(float)
     * df["Promo Ticket Face Value"].astype(float)
     * current_survival_rate
 )
