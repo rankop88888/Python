@@ -5,7 +5,6 @@ import pandas as pd
 st.set_page_config(page_title="Casino Promo & Expense Simulator", layout="wide")
 st.title("🎰 Casino Promo Ticket & Expense Simulator")
 
-# --- EMPHASIZED DEFAULT NOTICE AT THE TOP ---
 st.info(
     "**Default: Calculator uses an 8% promo ticket survival rate until you run the simulator.**\n\n"
     "_Run the simulator below for your real result!_"
@@ -48,7 +47,6 @@ def get_spin_outcome(rtp):
     payouts = payouts * scale
     return np.random.choice(payouts, p=weights)
 
-# --- Run simulation and store result in session state ---
 if run_btn:
     progress_bar = st.progress(0, text="Running simulations...")
     survival_count = 0
@@ -77,7 +75,6 @@ if run_btn:
     st.session_state['promo_survival_rate'] = float(survival_rate)
     st.session_state['avg_redeemed'] = float(avg_redeemed)
 
-# --- CALCULATION: SURVIVAL RATE FOR CALCULATOR ---
 if 'promo_survival_rate' in st.session_state:
     current_survival_rate = st.session_state['promo_survival_rate']
     st.caption(f"Current survival rate from simulator: **{current_survival_rate:.2%}**")
@@ -91,14 +88,14 @@ st.header("2. Promo & Points Expense Table")
 st.markdown("""
 Edit the table below:  
 - **Customers Rewarded:** How many customers receive a promo (ticket and/or points)
+- **Turnover per Customer:** Each customer's turnover (flow) for the promo period.
 - **Promo Ticket Face Value:** Value per ticket for each customer (can vary by row)
-- **Promo Points Given:** Points per customer (can be zero for ticket-only scenarios)
+- **Promo Points per Customer:** Points per customer (can be zero for ticket-only scenarios)
 """)
 
-# Example input table
 example = pd.DataFrame({
-    "Turnover": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
     "Customers Rewarded": [10, 25, 50, 100, 200],
+    "Turnover per Customer": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
     "Promo Ticket Face Value": [5_000.0, 10_000.0, 15_000.0, 20_000.0, 50_000.0],
     "Promo Points per Customer": [0, 25, 50, 100, 0],   # Points can be 0 for some campaigns
 })
@@ -115,21 +112,17 @@ promo_points_cost_rate = st.number_input(
 )
 st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
-# --- Theoretical gross win per row
-df["Theoretical Gross Win"] = df["Turnover"] * (1 - rtp)
-
-# --- Cost calculations using number of customers rewarded
-df["Cost of Promo Tickets"] = (
-    df["Customers Rewarded"].astype(float)
-    * df["Promo Ticket Face Value"].astype(float)
-    * current_survival_rate
-)
+# --- Now everything is "per all customers"
+df["Total Turnover"] = df["Customers Rewarded"].astype(float) * df["Turnover per Customer"].astype(float)
+df["Theoretical Gross Win"] = df["Total Turnover"] * (1 - rtp)
+df["Total Promo Tickets Value"] = df["Customers Rewarded"].astype(float) * df["Promo Ticket Face Value"].astype(float)
 df["Total Promo Points"] = df["Customers Rewarded"].astype(float) * df["Promo Points per Customer"].astype(float)
+
+df["Cost of Promo Tickets"] = df["Total Promo Tickets Value"] * current_survival_rate
 df["Cost of Promo Points"] = df["Total Promo Points"] * promo_points_cost_rate
 df["Total Promo Cost"] = df["Cost of Promo Tickets"] + df["Cost of Promo Points"]
 df["Promo Cost % of TGW"] = 100 * df["Total Promo Cost"] / df["Theoretical Gross Win"]
 
-# --- Allowed promo budget & net revenue
 promo_budget_percent = st.number_input(
     "Promo Budget (% of Theoretical Gross Win)", value=20.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
 )
@@ -138,9 +131,8 @@ st.caption(f"Promo cost budget: **{promo_budget_percent:.2f}%** of Theoretical G
 df["Allowed Promo Budget"] = df["Theoretical Gross Win"] * promo_budget_percent / 100
 df["Over/Under Budget"] = df["Total Promo Cost"] - df["Allowed Promo Budget"]
 df["Over Budget?"] = df["Over/Under Budget"].apply(lambda x: "Yes" if x > 0 else "No")
-df["Net Revenue After Promo"] = df["Turnover"] - df["Total Promo Cost"]
+df["Net Revenue After Promo"] = df["Total Turnover"] - df["Total Promo Cost"]
 
-# --- Format DataFrame with RED for negative values only ---
 def color_negative_red(val):
     try:
         return 'color: red;' if float(val) < 0 else ''
@@ -154,10 +146,12 @@ cost_columns = [
 ]
 
 styled_df = df.style.format({
-    "Turnover": "{:,.0f}",
     "Customers Rewarded": "{:,.0f}",
+    "Turnover per Customer": "{:,.0f}",
+    "Total Turnover": "{:,.0f}",
     "Promo Ticket Face Value": "{:,.2f}",
     "Promo Points per Customer": "{:,.0f}",
+    "Total Promo Tickets Value": "{:,.2f}",
     "Total Promo Points": "{:,.0f}",
     "Cost of Promo Tickets": "{:,.2f}",
     "Cost of Promo Points": "{:,.2f}",
@@ -173,11 +167,12 @@ st.dataframe(styled_df, use_container_width=True)
 
 st.info(
     f"""**Definitions:**  
-    - *Promo ticket cost*: Customers × face value × survival rate  
+    - *Total Turnover*: Customers × turnover per customer  
+    - *Promo ticket cost*: Total promo ticket value × survival rate  
     - *Promo points*: Customers × points per customer × entry price  
     - *Promo cost %*: How much of theoretical gross win is spent on promotions  
     - *Allowed Promo Budget*: User-entered % × TGW  
-    - *Net Revenue*: Turnover minus all promo costs  
+    - *Net Revenue*: Total Turnover minus all promo costs  
     """
 )
 
