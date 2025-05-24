@@ -23,7 +23,7 @@ with st.form("sim_params"):
     with col2:
         rtp = st.number_input("RTP (e.g., 0.96 = 96%)", value=0.96, min_value=0.5, max_value=1.0, step=0.01, format="%.2f")
         num_sims = st.number_input("Number of Simulations", value=10000, min_value=100, max_value=100_000, step=100)
-        stdev = st.number_input("Volatility (Standard Deviation, payout multiplier)", value=3.0, min_value=0.5, max_value=10.0, step=0.1)
+        stdev = st.number_input("Volatility (Standard Deviation, payout multiplier)", value=8.0, min_value=0.5, max_value=25.0, step=0.1)
     run_btn = st.form_submit_button("Run Promo Simulation")
 
 required_wager = promo_ticket_face_value * multiplier
@@ -98,9 +98,9 @@ Edit the table below:
 # Realistic, casino-friendly demo table:
 example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
-    "Promo Tickets/Points Given": [10, 25, 50, 100, 200],
-    "Promo Ticket Face Value": [10, 10, 20, 25, 50],
-    "Promo Points Given": [10, 25, 0, 100, 0],   # Example: some rows, points can be zero
+    "No. Promo Tickets/Points Given": [10, 25, 50, 100, 200],
+    "Promo Ticket Face Value": [5_000, 100_000, 150_000, 200_000, 500_000],
+    "Promo Points Given": [0, 25, 50, 100, 150],   # Example: some rows, points can be zero
 })
 
 df = st.data_editor(
@@ -137,7 +137,7 @@ df["Promo Cost % of TGW"] = 100 * df["Total Promo Cost"] / df["Theoretical Gross
 
 # --- Allowed promo budget & net revenue
 promo_budget_percent = st.number_input(
-    "Promo Budget (% of Theoretical Gross Win)", value=30.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
+    "Promo Budget (% of Theoretical Gross Win)", value=20.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
 )
 st.caption(f"Promo cost budget: **{promo_budget_percent:.2f}%** of Theoretical Gross Win (TGW)")
 
