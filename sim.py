@@ -97,7 +97,7 @@ Edit the table below:
 """)
 
 example = pd.DataFrame({
-    "Segment": [ "Regular", "Promo A", "Promo B", "Promo B", "VIP"],
+    "Segment": ["Regular", "Promo A", "Promo B", "Promo B", "VIP"],
     "Customers Rewarded": [100, 75, 50, 25, 10],
     "Turnover per Customer": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
     "Promo Ticket Face Value": [5_000.0, 10_000.0, 15_000.0, 20_000.0, 50_000.0],
@@ -140,6 +140,16 @@ df["Net Revenue After Promo"] = df["Total Turnover"] - df["Total Promo Cost"]
 def color_negative_red(val):
     try:
         return 'color: red;' if float(val) < 0 else ''
+    except Exception:
+        return ''
+
+def over_under_color(val):
+    try:
+        val = float(val)
+        if val > 0:
+            return 'color: red; font-weight: bold;'
+        else:
+            return 'color: green; font-weight: bold;'
     except Exception:
         return ''
 
@@ -187,8 +197,8 @@ styled_costs = costs_df.style.format({
 }).applymap(color_negative_red, subset=[
     "Cost of Promo Tickets", "Cost of Promo Points",
     "Total Promo Cost", "Promo Cost % of TGW",
-    "Allowed Promo Budget", "Over/Under Budget"
-])
+    "Allowed Promo Budget"
+]).applymap(over_under_color, subset=["Over/Under Budget"])
 st.dataframe(styled_costs, use_container_width=True)
 
 # --- CHARTS ---
@@ -214,13 +224,11 @@ st.pyplot(fig2)
 # --- CSV & EXCEL EXPORT ---
 st.header("4. Download Your Results")
 
-# Excel export using BytesIO
 def to_excel(bytes_df_dict):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for name, frame in bytes_df_dict.items():
             frame.to_excel(writer, sheet_name=name, index=False)
-        # DO NOT call writer.save() here!
     processed_data = output.getvalue()
     return processed_data
 
