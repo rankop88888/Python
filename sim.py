@@ -70,7 +70,6 @@ if run_btn:
     st.caption("You can now use these results in the expense table below.")
     st.session_state['promo_survival_rate'] = float(survival_rate)
     st.session_state['avg_redeemed'] = float(avg_redeemed)
-    st.info("**Current survival rate (default): 8%**\n\n_Run the simulator for a real result!_")
 # --- EXPENSE SCENARIO TABLE ---
 st.header("2. Promo & Points Expense Table")
 
