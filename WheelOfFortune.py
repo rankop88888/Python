@@ -6,48 +6,55 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Wheel of Fortune Promo Simulator", layout="wide")
 st.title("🎡 Wheel of Fortune Promo Simulator")
 
-# --- 1. PROMO TICKET COST OPTION (ALWAYS VISIBLE) ---
-st.header("Promo Ticket Option")
-promo_ticket_value = st.number_input("Promo Ticket Face Value (€)", value=100.0, min_value=0.01, step=0.01, format="%.2f")
-promo_survival = st.number_input("Promo Ticket Survival Rate (%)", value=8.0, min_value=0.0, max_value=100.0, step=0.01, format="%.2f")
-promo_exp_cost = promo_ticket_value * (promo_survival / 100.0)
+# --- 1. ARRANGE CONFIG IN 3 COLUMNS ---
+col1, col2, col3 = st.columns(3)
 
-# --- 2. CONFIGURE THE WHEEL ---
-st.header("1. Configure Wheel of Fortune")
-num_compartments = st.number_input("Number of Wheel Compartments", value=6, min_value=2, max_value=100, step=1)
+# -- 1.1 PROMO TICKET CONFIG --
+with col1:
+    st.subheader("Promo Ticket Option")
+    promo_ticket_value = st.number_input("Promo Ticket Face Value (€)", value=100.0, min_value=0.01, step=0.01, format="%.2f")
+    promo_survival = st.number_input("Promo Ticket Survival Rate (%)", value=8.0, min_value=0.0, max_value=100.0, step=0.01, format="%.2f")
+    promo_exp_cost = promo_ticket_value * (promo_survival / 100.0)
+    st.markdown(f"**Promo Expected Cost:** €{promo_exp_cost:,.2f}")
 
-default_points = [25, 50, 75, 100, 150, 200]
-if num_compartments <= len(default_points):
-    wheel_points = default_points[:num_compartments]
-else:
-    wheel_points = default_points + [default_points[-1]] * (num_compartments - len(default_points))
-
-points_values = st.text_input(
-    f"Enter {int(num_compartments)} point values (comma-separated)", 
-    value=",".join(str(x) for x in wheel_points)
-)
-try:
-    point_values = [float(x) for x in points_values.strip().split(",")]
-    if len(point_values) != num_compartments:
-        st.error(f"Enter exactly {num_compartments} values.")
-        valid_input = False
+# -- 1.2 WHEEL CONFIG --
+with col2:
+    st.subheader("Configure Wheel")
+    num_compartments = st.number_input("Number of Wheel Compartments", value=6, min_value=2, max_value=100, step=1)
+    default_points = [25, 50, 75, 100, 150, 200]
+    if num_compartments <= len(default_points):
+        wheel_points = default_points[:num_compartments]
     else:
-        valid_input = True
-except Exception:
-    st.error("Invalid point values. Please enter numbers, comma separated.")
-    point_values = []
-    valid_input = False
+        wheel_points = default_points + [default_points[-1]] * (num_compartments - len(default_points))
 
-point_eur = st.number_input("Points Value (€ per point)", value=1.0, min_value=0.01, step=0.01, format="%.2f")
+    points_values = st.text_input(
+        f"Enter {int(num_compartments)} point values (comma-separated)", 
+        value=",".join(str(x) for x in wheel_points)
+    )
+    try:
+        point_values = [float(x) for x in points_values.strip().split(",")]
+        if len(point_values) != num_compartments:
+            st.error(f"Enter exactly {num_compartments} values.")
+            valid_input = False
+        else:
+            valid_input = True
+    except Exception:
+        st.error("Invalid point values. Please enter numbers, comma separated.")
+        point_values = []
+        valid_input = False
 
-# --- 3. WHEEL SIMULATION SETTINGS ---
-st.header("2. Spin Simulation Settings")
-num_spins = st.number_input("Number of spins per customer (X)", value=1, min_value=1, max_value=100, step=1)
-num_customers = st.number_input("Number of customers per set", value=100, min_value=1, max_value=100_000, step=1)
-sets_per_day = st.number_input("Number of sets per day", value=1, min_value=1, max_value=100, step=1)
-st.caption(f"Total spins per day: **{num_spins*num_customers*sets_per_day:,}**")
+    point_eur = st.number_input("Points Value (€ per point)", value=1.0, min_value=0.01, step=0.01, format="%.2f")
 
-# --- 4. CALCULATIONS: ONLY IF VALID INPUT ---
+# -- 1.3 SPIN SETTINGS --
+with col3:
+    st.subheader("Spin Simulation Settings")
+    num_spins = st.number_input("Spins per customer", value=1, min_value=1, max_value=100, step=1)
+    num_customers = st.number_input("Customers per set", value=100, min_value=1, max_value=100_000, step=1)
+    sets_per_day = st.number_input("Sets per day", value=1, min_value=1, max_value=100, step=1)
+    st.caption(f"**Total spins per day:** {num_spins*num_customers*sets_per_day:,}")
+
+# ---- REST OF YOUR SCRIPT GOES HERE ----
+
 if valid_input:
     avg_points = np.mean(point_values)
     avg_wheel_cost = avg_points * point_eur
@@ -59,7 +66,7 @@ if valid_input:
     combined_per_customer = num_spins * combined_cost
     combined_daily_cost = num_customers * sets_per_day * num_spins * combined_cost
 
-    # --- 5. SUMMARY TABLE ---
+    # --- 2. SUMMARY TABLE ---
     st.header("Summary Table")
     summary_dict = {
         "Number of Compartments": [num_compartments],
@@ -82,7 +89,7 @@ if valid_input:
     summary_df = pd.DataFrame(summary_dict)
     st.dataframe(summary_df)
 
-    # --- 6. SIMULATE CUSTOMER SPINNING X TIMES IN A ROW ---
+    # --- 3. SIMULATE CUSTOMER SPINNING X TIMES IN A ROW ---
     st.header("Simulate Repeated Spins for a Single Customer")
     num_trials = st.number_input("How many simulated customers?", value=1000, min_value=1, max_value=100_000, step=1)
     run_customer_sim = st.button("Simulate for One Customer (X spins, Y times)")
@@ -97,7 +104,7 @@ if valid_input:
         st.success(f"Average for {num_trials:,} customers spinning {num_spins}x: **{avg_customer_points:,.2f} points (€{avg_customer_eur:,.2f})**")
         st.write(f"- Min: {np.min(total_points_list):,.0f} points, Max: {np.max(total_points_list):,.0f} points")
 
-    # --- 7. PIE CHART & BAR CHART ---
+    # --- 4. PIE CHART & BAR CHART ---
     st.header("Wheel Distribution Visualization")
     pie_labels = [f"{int(p)}" for p in point_values]
     pie_counts = [1]*len(point_values)
@@ -113,7 +120,7 @@ if valid_input:
     ax_bar.set_title("Points Distribution on Wheel")
     st.pyplot(fig_bar)
 
-    # --- 8. EXPORT SUMMARY ---
+    # --- 5. EXPORT SUMMARY ---
     st.header("6. Download/Export Summary")
     csv_data = summary_df.to_csv(index=False).encode('utf-8')
     st.download_button("Download Summary as CSV", csv_data, "wheel_of_fortune_summary.csv", "text/csv")
@@ -122,4 +129,3 @@ if valid_input:
 
 else:
     st.warning("Please enter a valid, comma-separated list of point values matching the number of compartments.")
-
