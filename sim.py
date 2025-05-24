@@ -70,7 +70,7 @@ if run_btn:
     st.caption("You can now use these results in the expense table below.")
     st.session_state['promo_survival_rate'] = float(survival_rate)
     st.session_state['avg_redeemed'] = float(avg_redeemed)
-
+    st.info("**Current survival rate (default): 8%**\n\n_Run the simulator for a real result!_")
 # --- EXPENSE SCENARIO TABLE ---
 st.header("2. Promo & Points Expense Table")
 
@@ -120,7 +120,7 @@ promo_budget_percent = st.number_input(
     "Promo Budget (% of Theoretical Gross Win)", value=20.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
 )
 st.caption(f"Promo cost budget: **{promo_budget_percent:.2f}%** of Theoretical Gross Win (TGW)")
-st.info("**Current survival rate (default): 8%**\n\n_Run the simulator for a real result!_")
+
 
 df["Theoretical Gross Win"] = df["Turnover"] * (1 - rtp)
 df["Allowed Promo Budget"] = df["Theoretical Gross Win"] * promo_budget_percent / 100
