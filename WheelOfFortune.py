@@ -124,18 +124,12 @@ if valid_input:
         st.pyplot(fig_bar, use_container_width=False)
 
     # --- 5. EXPORT SUMMARY ---
-    st.header("6. Download/Export Summary")
+   st.header("6. Download/Export Summary")
     csv_data = summary_df.to_csv(index=False).encode('utf-8')
     st.download_button("Download Summary as CSV", csv_data, "wheel_of_fortune_summary.csv", "text/csv")
 
-    st.caption("Adjust values, get your cost. For multiple segments, rerun or build out per group.")
-import io
-
-# ... inside the `if valid_input:` block, after CSV export...
-
-    # --- 6. EXPORT TO EXCEL (.xlsx) ---
-
-def to_excel(df):
+    import io
+    def to_excel(df):
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df.to_excel(writer, index=False, sheet_name='Summary')
@@ -149,5 +143,8 @@ def to_excel(df):
         file_name="wheel_of_fortune_summary.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+    st.caption("Adjust values, get your cost. For multiple segments, rerun or build out per group.")
+
 else:
     st.warning("Please enter a valid, comma-separated list of point values matching the number of compartments.")
