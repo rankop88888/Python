@@ -98,7 +98,7 @@ Edit the table below:
 # Realistic, casino-friendly demo table:
 example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
-    "No. Promo Tickets/Points Given": [10, 25, 50, 100, 200],
+    "No.Promo Tickets/Points Given": [10, 25, 50, 100, 200],
     "Promo Ticket Face Value": [5_000, 100_000, 150_000, 200_000, 500_000],
     "Promo Points Given": [0, 25, 50, 100, 150],   # Example: some rows, points can be zero
 })
@@ -114,7 +114,7 @@ df = st.data_editor(
 # (But allow manual 0 for points.)
 df["Promo Points Given"] = [
     pts if pts == 0 else tix
-    for tix, pts in zip(df["Promo Tickets/Points Given"], df["Promo Points Given"])
+    for tix, pts in zip(df["No.Promo Tickets/Points Given"], df["Promo Points Given"])
 ]
 
 promo_points_cost_rate = st.number_input(
