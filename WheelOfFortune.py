@@ -105,20 +105,27 @@ if valid_input:
         st.write(f"- Min: {np.min(total_points_list):,.0f} points, Max: {np.max(total_points_list):,.0f} points")
 
     # --- 4. PIE CHART & BAR CHART ---
-    st.header("Wheel Distribution Visualization")
+    s# --- 4. PIE CHART & BAR CHART ---
+st.header("Wheel Distribution Visualization")
+
+chart_cols = st.columns(2)
+
+with chart_cols[0]:
     pie_labels = [f"{int(p)}" for p in point_values]
     pie_counts = [1]*len(point_values)
-    fig_pie, ax_pie = plt.subplots()
+    fig_pie, ax_pie = plt.subplots(figsize=(4, 4))   # <-- smaller size
     ax_pie.pie(pie_counts, labels=pie_labels, autopct=lambda pct: f"{pct:.1f}%")
     ax_pie.set_title("Wheel Compartment Probabilities")
-    st.pyplot(fig_pie)
+    st.pyplot(fig_pie, use_container_width=False)
 
-    fig_bar, ax_bar = plt.subplots()
+with chart_cols[1]:
+    fig_bar, ax_bar = plt.subplots(figsize=(4, 4))   # <-- smaller size
     ax_bar.bar(pie_labels, point_values)
     ax_bar.set_ylabel("Points per Compartment")
     ax_bar.set_xlabel("Wheel Compartment")
     ax_bar.set_title("Points Distribution on Wheel")
-    st.pyplot(fig_bar)
+    st.pyplot(fig_bar, use_container_width=False)
+
 
     # --- 5. EXPORT SUMMARY ---
     st.header("6. Download/Export Summary")
