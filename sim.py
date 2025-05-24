@@ -4,6 +4,7 @@ import pandas as pd
 
 st.set_page_config(page_title="Casino Promo & Expense Simulator", layout="wide")
 st.title("🎰 Casino Promo Ticket & Expense Simulator")
+st.info("**Default: Until you run the simulator, the calculator assumes an 8% promo ticket survival rate.**\n\n_Run the simulator for your real value!_")
 
 # --- PROMO SURVIVAL SIMULATION ---
 st.header("1. Promo Ticket Survival Simulation")
