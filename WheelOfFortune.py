@@ -148,7 +148,5 @@ import io
         file_name="wheel_of_fortune_summary.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
 else:
     st.warning("Please enter a valid, comma-separated list of point values matching the number of compartments.")
