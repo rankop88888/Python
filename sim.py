@@ -67,11 +67,6 @@ if run_btn:
     st.session_state['promo_survival_rate'] = survival_rate
     st.session_state['avg_redeemed'] = avg_redeemed
 
-else:
-    if 'promo_survival_rate' not in st.session_state:
-        st.session_state['promo_survival_rate'] = 0.05
-        st.session_state['avg_redeemed'] = promo_amount * 0.2
-
 # --- EXPENSE SCENARIO TABLE ---
 st.header("2. Promo & Points Expense Table")
 
@@ -95,7 +90,12 @@ df = st.data_editor(
     key="expense_table"
 )
 
-promo_ticket_cost = promo_amount * st.session_state['promo_survival_rate']
+# --- Cost calculations: if simulation NOT run, ticket cost = 0 ---
+if 'promo_survival_rate' not in st.session_state or not run_btn:
+    promo_ticket_cost = 0
+else:
+    promo_ticket_cost = promo_amount * st.session_state['promo_survival_rate']
+
 promo_points_cost_rate = st.number_input(
     "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
 )
@@ -122,8 +122,8 @@ st.dataframe(styled_df, use_container_width=True)
 
 st.info(
     f"""**Definitions:**  
-    - *Promo ticket cost*: Based on simulated survival rate & average payout  
-    - *Promo points*: Costed 1:1 (or at your custom rate above), as not wagered  
+    - *Promo ticket cost*: Face value × simulated survival rate (expected actual cost)  
+    - *Promo points*: Costed at entry price (no simulation/randomness)  
     - *Net Revenue*: Turnover minus all promo costs  
     - *Promo cost %*: How much of turnover is spent on promotions  
     """
