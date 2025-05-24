@@ -78,10 +78,12 @@ Edit the table below:
 """)
 
 # Example data
-example = pd.DataFrame({
-    "Turnover": [100_000, 250_000, 500_000],
+ example = pd.DataFrame({
+    "Turnover": [100_000, 250_000, 500_000, 750_000, 1_000_000],
     "Promo Tickets Given": [5000, 10000, 20000, 25000, 50000],
     "Promo Points Given": [25, 50, 75, 100, 150]
+})
+
 })
 
 df = st.data_editor(
