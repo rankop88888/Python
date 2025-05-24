@@ -17,8 +17,8 @@ st.header("1. Promo Ticket Survival Simulation")
 with st.form("sim_params"):
     col1, col2 = st.columns(2)
     with col1:
-        promo_ticket_face_value = st.number_input("Promo Ticket Face Value ()", value=5000.0, min_value=0.01, step=0.01, format="%.2f")
-        bet_size = st.number_input("Bet Size", value=100, min_value=1, step=1)
+        promo_ticket_face_value = st.number_input("Promo Ticket Face Value (€)", value=5000.0, min_value=0.01, step=0.01, format="%.2f")
+        bet_size = st.number_input("Bet Size (€)", value=100.0, min_value=1.0, step=1.0, format="%.2f")
         multiplier = st.number_input("Wagering Multiplier (x)", value=40, min_value=1, step=1)
     with col2:
         rtp = st.number_input("RTP (e.g., 0.96 = 96%)", value=0.96, min_value=0.5, max_value=1.0, step=0.01, format="%.2f")
@@ -30,11 +30,11 @@ required_wager = promo_ticket_face_value * multiplier
 max_spins = int(required_wager // bet_size)
 st.caption(
     f"""
-    • Promo Ticket Face Value: **{promo_ticket_face_value:,.2f}**  
-    • Bet Size: **{bet_size:,}**  
+    • Promo Ticket Face Value: **€{promo_ticket_face_value:,.2f}**  
+    • Bet Size: **€{bet_size:,.2f}**  
     • Wagering Multiplier: **{multiplier:,}**  
     • Number of Simulations: **{num_sims:,}**  
-    • Required Wager: **{required_wager:,.2f}**  
+    • Required Wager: **€{required_wager:,.2f}**  
     • Maximum Number of Spins: **{max_spins:,}**
     """
 )
@@ -72,7 +72,7 @@ if run_btn:
     survival_rate = survival_count / num_sims
     avg_redeemed = np.mean(total_redeemed)
     st.success(f"Survival Rate: **{survival_rate*100:,.2f}%**")
-    st.write(f"Average payout for surviving promo tickets: **{avg_redeemed:,.2f}**")
+    st.write(f"Average payout for surviving promo tickets: **€{avg_redeemed:,.2f}**")
     st.caption("You can now use these results in the expense table below.")
     st.session_state['promo_survival_rate'] = float(survival_rate)
     st.session_state['avg_redeemed'] = float(avg_redeemed)
@@ -90,17 +90,17 @@ st.header("2. Promo & Points Expense Table")
 
 st.markdown("""
 Edit the table below:  
-- **Promo Tickets/Points Given:** For each scenario, enter tickets (points will auto-match; you can set points to 0 if needed).
+- **No. of Tickets/Points:** For each scenario, enter tickets (points will auto-match; you can set points to 0 if needed).
 - **Promo Ticket Face Value:** You can vary per row.
 - **Promo Points Given:** Can be zero for ticket-only scenarios.
 """)
 
-# Realistic, casino-friendly demo table:
+# Example input table
 example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
-    "No.Promo Tickets/Points Given": [10, 25, 50, 100, 200],
-    "Promo Ticket Face Value": [5_000, 100_000, 150_000, 200_000, 500_000],
-    "Promo Points Given": [0, 25, 50, 100, 150],   # Example: some rows, points can be zero
+    "No. of Tickets/Points": [10, 25, 50, 100, 200],
+    "Promo Ticket Face Value": [5_000.0, 10_000.0, 15_000.0, 20_000.0, 50_000.0],
+    "Promo Points Given": [0, 25, 50, 100, 0],   # Points can be 0
 })
 
 df = st.data_editor(
@@ -110,24 +110,23 @@ df = st.data_editor(
     key="expense_table"
 )
 
-# Enforce: Promo Points Given = Promo Tickets/Points Given (unless 0)
-# (But ow manual 0 for points.)
+# Enforce: Promo Points Given = No. of Tickets/Points (unless 0)
 df["Promo Points Given"] = [
     pts if pts == 0 else tix
-    for tix, pts in zip(df["No.Promo Tickets/Points Given"], df["Promo Points Given"])
+    for tix, pts in zip(df["No. of Tickets/Points"], df["Promo Points Given"])
 ]
 
 promo_points_cost_rate = st.number_input(
     "Cost per point (e.g., 1 EUR per 1 point)", value=1.0, step=0.1, format="%.2f"
 )
-st.caption(f"Cost per point: **{promo_points_cost_rate:,.2f}**")
+st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
 # --- Theoretical gross win per row
 df["Theoretical Gross Win"] = df["Turnover"] * (1 - rtp)
 
 # --- Cost of promo tickets and points
 df["Cost of Promo Tickets"] = (
-    df["No.Promo Tickets/Points Given"].astype(float)
+    df["No. of Tickets/Points"].astype(float)
     * df["Promo Ticket Face Value"].astype(float)
     * current_survival_rate
 )
@@ -135,37 +134,33 @@ df["Cost of Promo Points"] = df["Promo Points Given"].astype(float) * promo_poin
 df["Total Promo Cost"] = df["Cost of Promo Tickets"] + df["Cost of Promo Points"]
 df["Promo Cost % of TGW"] = 100 * df["Total Promo Cost"] / df["Theoretical Gross Win"]
 
-# --- owed promo budget & net revenue
+# --- Allowed promo budget & net revenue
 promo_budget_percent = st.number_input(
     "Promo Budget (% of Theoretical Gross Win)", value=20.0, min_value=0.0, max_value=100.0, step=0.1, format="%.2f"
 )
 st.caption(f"Promo cost budget: **{promo_budget_percent:.2f}%** of Theoretical Gross Win (TGW)")
 
-df["owed Promo Budget"] = df["Theoretical Gross Win"] * promo_budget_percent / 100
-df["Over/Under Budget"] = df["Total Promo Cost"] - df["owed Promo Budget"]
+df["Allowed Promo Budget"] = df["Theoretical Gross Win"] * promo_budget_percent / 100
+df["Over/Under Budget"] = df["Total Promo Cost"] - df["Allowed Promo Budget"]
 df["Over Budget?"] = df["Over/Under Budget"].apply(lambda x: "Yes" if x > 0 else "No")
 df["Net Revenue After Promo"] = df["Turnover"] - df["Total Promo Cost"]
 
-# --- Format DataFrame with RED for negative/cost columns
+# --- Format DataFrame with RED for negative values only ---
 def color_negative_red(val):
     try:
-        if float(val) < 0:
-            return 'color: red;'
-        if '' in str(val) or '%' in str(val):  # highlight cost/percent columns as red
-            return 'color: red;'
+        return 'color: red;' if float(val) < 0 else ''
     except Exception:
         return ''
-    return 'color: red;' if isinstance(val, (int, float)) and val < 0 else ''
 
 cost_columns = [
     "Cost of Promo Tickets", "Cost of Promo Points",
     "Total Promo Cost", "Promo Cost % of TGW",
-    "owed Promo Budget", "Over/Under Budget"
+    "Allowed Promo Budget", "Over/Under Budget"
 ]
 
 styled_df = df.style.format({
     "Turnover": "{:,.0f}",
-    "Promo Tickets/Points Given": "{:,.0f}",
+    "No. of Tickets/Points": "{:,.0f}",
     "Promo Ticket Face Value": "{:,.2f}",
     "Promo Points Given": "{:,.0f}",
     "Cost of Promo Tickets": "{:,.2f}",
@@ -173,7 +168,7 @@ styled_df = df.style.format({
     "Total Promo Cost": "{:,.2f}",
     "Promo Cost % of TGW": "{:,.2f}%",
     "Theoretical Gross Win": "{:,.2f}",
-    "owed Promo Budget": "{:,.2f}",
+    "Allowed Promo Budget": "{:,.2f}",
     "Over/Under Budget": "{:,.2f}",
     "Net Revenue After Promo": "{:,.2f}"
 }).applymap(color_negative_red, subset=cost_columns)
@@ -185,9 +180,9 @@ st.info(
     - *Promo ticket cost*: Tickets × face value × survival rate  
     - *Promo points*: Count × entry price (or 0 if blank)  
     - *Promo cost %*: How much of theoretical gross win is spent on promotions  
-    - *owed Promo Budget*: User-entered % × TGW  
-    - *Net Revenue*: Turnover minus  promo costs  
+    - *Allowed Promo Budget*: User-entered % × TGW  
+    - *Net Revenue*: Turnover minus all promo costs  
     """
 )
 
-st.caption("💡 To optimize: track incremental revenue generated by promos, and set a target promo % of theoretical gross win (TGW), usuy 15–30% in real casino operations.")
+st.caption("💡 To optimize: track incremental revenue generated by promos, and set a target promo % of theoretical gross win (TGW), usually 15–30% in real casino operations.")
