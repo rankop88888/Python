@@ -97,7 +97,7 @@ Edit the table below:
 
 example = pd.DataFrame({
     "Turnover": [100_000, 250_000, 500_000, 750_000, 1_000_000],
-    "Promo Tickets Given": [5_000, 10_000, 20_000, 25_000, 50_000],
+    "Promo Tickets Given": [25, 50, 100, 500, 1_000],
     "Promo Points Given": [25, 50, 75, 100, 150]
 })
 
