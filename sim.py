@@ -97,7 +97,7 @@ example = pd.DataFrame({
     "Customers Rewarded": [10, 25, 50, 100, 200],
     "Turnover per Customer": [100_000, 250_000, 500_000, 1_000_000, 2_000_000],
     "Promo Ticket Face Value": [5_000.0, 10_000.0, 15_000.0, 20_000.0, 50_000.0],
-    "Promo Points per Customer": [0, 25, 50, 100, 0],   # Points can be 0 for some campaigns
+    "Promo Points per Customer": [0, 25, 50, 100, 150],   # Points can be 0 for some campaigns
 })
 
 df = st.data_editor(
