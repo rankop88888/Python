@@ -112,7 +112,7 @@ df = st.data_editor(
 )
 
 promo_points_cost_rate = st.number_input(
-    "Cost per point (e.g., 1 EUR per point)", value=1.0, step=0.1, format="%.2f"
+    "Cost per point (e.g., 100 ALL per point)", value=100.0, step=50.0, format="%.2f"
 )
 st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
 
