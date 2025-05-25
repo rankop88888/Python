@@ -291,6 +291,7 @@ st.info(
     - *Promo cost %*: How much of theoretical gross win is spent on promotions  
     - *Allowed Promo Budget*: User-entered % × TGW  
     - *Net Revenue*: Total Turnover minus all promo costs  
+    - *@Pierre2025 
     """
 )
 
