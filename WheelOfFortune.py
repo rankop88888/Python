@@ -101,7 +101,7 @@ if valid:
     distinct_prizes = sorted(set(wheel_values))
     prob_table = []
     
-    for prize in distinct_prizes:
+for prize in distinct_prizes:
     count = wheel_values.count(prize)
     prob_single = count / num_compartments
     prob_at_least_one = 1 - (1 - prob_single)**k_spins if prob_single > 0 else 0
