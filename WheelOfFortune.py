@@ -57,7 +57,6 @@ with col2:
         if use_promo_ticket:
             default_lines = "\n".join(f"{v} 1" for v in default_wheel)
         else:
-            # Try to fit default_wheel into lines (all "1" by default)
             default_lines = "\n".join(f"{v} 1" for v in default_wheel)
         pairs_text = st.text_area("Value × Count table", value=default_lines)
         pairs = []
@@ -140,7 +139,20 @@ if valid:
         st.success(f"Average for {num_trials:,} customers spinning {num_spins}x: **{avg_customer_points:,.2f} points (ALL{avg_customer_eur:,.2f})**")
         st.write(f"- Min: {np.min(total_points_list):,.0f} points, Max: {np.max(total_points_list):,.0f} points")
 
-    # --- 4. PIE CHART & BAR CHART ---
+    # --- 4. WINNING PROBABILITY CALCULATION ---
+    st.header("Probability of Hitting a Prize")
+    target_value = st.number_input("Prize value to check (e.g. 10000)", value=float(max(wheel_values)), step=1.0)
+    hit_count = wheel_values.count(target_value)
+    prob_single = hit_count / num_compartments if num_compartments > 0 else 0
+    prob_at_least_one = 1 - (1 - prob_single)**num_spins if prob_single > 0 else 0
+    exp_wins = num_spins * prob_single
+    st.info(
+        f"Chance of getting **at least one {int(target_value)}** in {num_spins} spins: "
+        f"**{prob_at_least_one:.2%}**\n\n"
+        f"Expected number of times: **{exp_wins:.2f}**"
+    )
+
+    # --- 5. PIE CHART & BAR CHART ---
     st.header("Wheel Distribution Visualization")
     chart_cols = st.columns(2)
     with chart_cols[0]:
@@ -158,7 +170,7 @@ if valid:
         ax_bar.set_title("Values Distribution on Wheel", fontsize=10)
         st.pyplot(fig_bar, use_container_width=False)
 
-    # --- 5. EXPORT SUMMARY ---
+    # --- 6. EXPORT SUMMARY ---
     st.header("Download/Export Summary")
     csv_data = summary_df.to_csv(index=False).encode('utf-8')
     st.download_button("Download Summary as CSV", csv_data, "wheel_of_fortune_summary.csv", "text/csv")
@@ -179,5 +191,6 @@ if valid:
     )
 
     st.caption("Adjust values, get your cost. For multiple segments, rerun or build out per group.")
+
 else:
     st.warning("Please enter valid values/multipliers matching the number of compartments.")
