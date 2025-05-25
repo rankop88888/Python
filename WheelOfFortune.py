@@ -92,6 +92,28 @@ with col3:
 
 # ---- CALCULATIONS AND RESULTS ----
 if valid:
+    # --- 4. PROBABILITY TABLE: HIT EACH PRIZE IN K SPINS ---
+st.header("Probability Table: Hitting Any Prize in K Spins")
+k_spins = st.number_input(
+    "Number of consecutive spins (for probability table)", value=num_spins, min_value=1, max_value=100, step=1
+)
+
+distinct_prizes = sorted(set(wheel_values))
+prob_table = []
+for prize in distinct_prizes:
+    count = wheel_values.count(prize)
+    prob_single = count / num_compartments
+    prob_at_least_one = 1 - (1 - prob_single)**k_spins if prob_single > 0 else 0
+    exp_hits = k_spins * prob_single
+    prob_table.append({
+        "Prize": int(prize),
+        f"Probability in {k_spins} spins": f"{prob_at_least_one:.2%}",
+        f"Expected hits in {k_spins} spins": f"{exp_hits:.2f}"
+    })
+
+prob_df = pd.DataFrame(prob_table)
+st.dataframe(prob_df, hide_index=True)
+
     avg_points = np.mean(wheel_values)
     if use_promo_ticket:
         avg_wheel_cost = avg_points * (promo_survival / 100.0)
