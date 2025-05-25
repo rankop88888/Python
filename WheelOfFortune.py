@@ -95,28 +95,26 @@ if valid:
     # --- 4. PROBABILITY TABLE: HIT EACH PRIZE IN K SPINS ---
     st.header("Probability Table: Hitting Any Prize in K Spins")
     k_spins = st.number_input(
-    "Number of consecutive spins (for probability table)", value=num_spins, min_value=1, max_value=100, step=1
+        "Number of consecutive spins (for probability table)", value=num_spins, min_value=1, max_value=100, step=1
     )
 
     distinct_prizes = sorted(set(wheel_values))
     prob_table = []
-    
-for prize in distinct_prizes:
-    count = wheel_values.count(prize)
-    prob_single = count / num_compartments
-    prob_at_least_one = 1 - (1 - prob_single)**k_spins if prob_single > 0 else 0
-    exp_hits = k_spins * prob_single
-    prob_table.append({
-        "Prize": int(prize),
-        f"Probability in {k_spins} spins": f"{prob_at_least_one:.2%}",
-        f"Expected hits in {k_spins} spins": f"{exp_hits:.2f}"
-    })
+    for prize in distinct_prizes:
+        count = wheel_values.count(prize)
+        prob_single = count / num_compartments
+        prob_at_least_one = 1 - (1 - prob_single)**k_spins if prob_single > 0 else 0
+        exp_hits = k_spins * prob_single
+        prob_table.append({
+            "Prize": int(prize),
+            f"Probability in {k_spins} spins": f"{prob_at_least_one:.2%}",
+            f"Expected hits in {k_spins} spins": f"{exp_hits:.2f}"
+        })
 
     prob_df = pd.DataFrame(prob_table)
     st.dataframe(prob_df, hide_index=True)
 
     avg_points = np.mean(wheel_values)
-    
     if use_promo_ticket:
         avg_wheel_cost = avg_points * (promo_survival / 100.0)
     else:
@@ -152,13 +150,13 @@ for prize in distinct_prizes:
     if run_customer_sim:
         rng = np.random.default_rng()
         total_points_list = []
-    for _ in range(num_trials):
+        for _ in range(num_trials):
             spins = rng.choice(wheel_values, size=num_spins)
             total_points_list.append(np.sum(spins))
         avg_customer_points = np.mean(total_points_list)
-    if use_promo_ticket:
+        if use_promo_ticket:
             avg_customer_eur = avg_customer_points * (promo_survival / 100.0)
-    else:
+        else:
             avg_customer_eur = avg_customer_points * point_eur
         st.success(f"Average for {num_trials:,} customers spinning {num_spins}x: **{avg_customer_points:,.2f} points (ALL{avg_customer_eur:,.2f})**")
         st.write(f"- Min: {np.min(total_points_list):,.0f} points, Max: {np.max(total_points_list):,.0f} points")
