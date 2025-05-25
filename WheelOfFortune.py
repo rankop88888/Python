@@ -100,6 +100,7 @@ if valid:
 
     distinct_prizes = sorted(set(wheel_values))
     prob_table = []
+    
     for prize in distinct_prizes:
     count = wheel_values.count(prize)
     prob_single = count / num_compartments
@@ -115,6 +116,7 @@ if valid:
     st.dataframe(prob_df, hide_index=True)
 
     avg_points = np.mean(wheel_values)
+    
     if use_promo_ticket:
         avg_wheel_cost = avg_points * (promo_survival / 100.0)
     else:
