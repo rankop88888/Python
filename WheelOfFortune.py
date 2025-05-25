@@ -152,13 +152,13 @@ for prize in distinct_prizes:
     if run_customer_sim:
         rng = np.random.default_rng()
         total_points_list = []
-        for _ in range(num_trials):
+    for _ in range(num_trials):
             spins = rng.choice(wheel_values, size=num_spins)
             total_points_list.append(np.sum(spins))
         avg_customer_points = np.mean(total_points_list)
-        if use_promo_ticket:
+    if use_promo_ticket:
             avg_customer_eur = avg_customer_points * (promo_survival / 100.0)
-        else:
+    else:
             avg_customer_eur = avg_customer_points * point_eur
         st.success(f"Average for {num_trials:,} customers spinning {num_spins}x: **{avg_customer_points:,.2f} points (ALL{avg_customer_eur:,.2f})**")
         st.write(f"- Min: {np.min(total_points_list):,.0f} points, Max: {np.max(total_points_list):,.0f} points")
