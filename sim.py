@@ -206,20 +206,24 @@ st.header("3. Promo Analysis Charts")
 st.markdown("Visualize promo efficiency and cost structure by scenario/segment.")
 
 # Promo Cost % of TGW Chart
-fig1, ax1 = plt.subplots(figsize=(4, 3))
-ax1.bar(df["Segment"], df["Promo Cost % of TGW"])
-ax1.set_ylabel("Promo Cost % of TGW")
-ax1.set_title("Promo Cost % of Theoretical Gross Win by Segment")
-ax1.axhline(y=promo_budget_percent, color='r', linestyle='--', label='Allowed Budget (%)')
-ax1.legend()
-st.pyplot(fig1)
+chart_cols = st.columns(2)
 
-# Total Promo Cost Chart
-fig2, ax2 = plt.subplots(figsize=(4, 3))
-ax2.bar(df["Segment"], df["Total Promo Cost"])
-ax2.set_ylabel("Total Promo Cost (ALL)")
-ax2.set_title("Total Promo Cost by Segment")
-st.pyplot(fig2)
+with chart_cols[0]:
+    fig1, ax1 = plt.subplots(figsize=(4, 3))   # or (3,2) for extra small
+    ax1.bar(df["Segment"], df["Promo Cost % of TGW"])
+    ax1.set_ylabel("Promo Cost % of TGW")
+    ax1.set_title("Promo Cost % of Theoretical Gross Win by Segment", fontsize=10)
+    ax1.axhline(y=promo_budget_percent, color='r', linestyle='--', label='Allowed Budget (%)')
+    ax1.legend(fontsize=8)
+    st.pyplot(fig1, use_container_width=False)
+
+with chart_cols[1]:
+    fig2, ax2 = plt.subplots(figsize=(4, 3))
+    ax2.bar(df["Segment"], df["Total Promo Cost"])
+    ax2.set_ylabel("Total Promo Cost (ALL)")
+    ax2.set_title("Total Promo Cost by Segment", fontsize=10)
+    st.pyplot(fig2, use_container_width=False)
+
 
 # --- CSV & EXCEL EXPORT ---
 st.header("4. Download Your Results")
