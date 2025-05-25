@@ -31,11 +31,11 @@ required_wager = promo_ticket_face_value * multiplier
 max_spins = int(required_wager // bet_size)
 st.caption(
     f"""
-    • Promo Ticket Face Value: **€{promo_ticket_face_value:,.2f}**  
-    • Bet Size: **€{bet_size:,.2f}**  
+    • Promo Ticket Face Value: **ALL{promo_ticket_face_value:,.2f}**  
+    • Bet Size: **ALL{bet_size:,.2f}**  
     • Wagering Multiplier: **{multiplier:,}**  
     • Number of Simulations: **{num_sims:,}**  
-    • Required Wager: **€{required_wager:,.2f}**  
+    • Required Wager: **ALL{required_wager:,.2f}**  
     • Maximum Number of Spins: **{max_spins:,}**
     """
 )
@@ -72,7 +72,7 @@ if run_btn:
     survival_rate = survival_count / num_sims
     avg_redeemed = np.mean(total_redeemed)
     st.success(f"Survival Rate: **{survival_rate*100:,.2f}%**")
-    st.write(f"Average payout for surviving promo tickets: **€{avg_redeemed:,.2f}**")
+    st.write(f"Average payout for surviving promo tickets: **ALL{avg_redeemed:,.2f}**")
     st.caption("You can now use these results in the expense table below.")
     st.session_state['promo_survival_rate'] = float(survival_rate)
     st.session_state['avg_redeemed'] = float(avg_redeemed)
@@ -114,7 +114,7 @@ df = st.data_editor(
 promo_points_cost_rate = st.number_input(
     "Cost per point (e.g., 100 ALL per point)", value=100.0, step=50.0, format="%.2f"
 )
-st.caption(f"Cost per point: **€{promo_points_cost_rate:,.2f}**")
+st.caption(f"Cost per point: **ALL{promo_points_cost_rate:,.2f}**")
 
 # --- Calculations per all customers
 df["Total Turnover"] = df["Customers Rewarded"].astype(float) * df["Turnover per Customer"].astype(float)
@@ -206,7 +206,7 @@ st.header("3. Promo Analysis Charts")
 st.markdown("Visualize promo efficiency and cost structure by scenario/segment.")
 
 # Promo Cost % of TGW Chart
-fig1, ax1 = plt.subplots()
+fig1, ax1 = plt.subplots(figsize=(4, 3))
 ax1.bar(df["Segment"], df["Promo Cost % of TGW"])
 ax1.set_ylabel("Promo Cost % of TGW")
 ax1.set_title("Promo Cost % of Theoretical Gross Win by Segment")
@@ -215,9 +215,9 @@ ax1.legend()
 st.pyplot(fig1)
 
 # Total Promo Cost Chart
-fig2, ax2 = plt.subplots()
+fig2, ax2 = plt.subplots(figsize=(4, 3))
 ax2.bar(df["Segment"], df["Total Promo Cost"])
-ax2.set_ylabel("Total Promo Cost (€)")
+ax2.set_ylabel("Total Promo Cost (ALL)")
 ax2.set_title("Total Promo Cost by Segment")
 st.pyplot(fig2)
 
