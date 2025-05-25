@@ -85,7 +85,7 @@ with col2:
 
 with col3:
     st.subheader("Spin Simulation Settings")
-    point_eur = st.number_input("Points Value (€ per point)", value=1.0, min_value=0.01, step=0.01, format="%.2f")
+    point_eur = st.number_input("Points Value (ALL per point)", value=100.0, min_value=10.00, step=10.00, format="%.2f")
     num_spins = st.number_input("Spins per customer", value=1, min_value=1, max_value=100, step=1)
     num_customers = st.number_input("Customers per set", value=5, min_value=1, max_value=100_000, step=1)
     sets_per_day = st.number_input("Sets per day", value=1, min_value=1, max_value=100, step=1)
@@ -107,9 +107,9 @@ if valid:
     summary_dict = {
         "Number of Compartments": [num_compartments],
         "Points per Compartment": [", ".join(str(int(p)) for p in wheel_values)],
-        "Points Value (€)": [point_eur if not use_promo_ticket else "-"],
+        "Points Value (ALL)": [point_eur if not use_promo_ticket else "-"],
         "Avg Points per Spin": [avg_points],
-        "Avg Cost per Spin (€)": [avg_wheel_cost],
+        "Avg Cost per Spin (ALL)": [avg_wheel_cost],
         "Promo Survival Rate (%)": [promo_survival if use_promo_ticket else "-"],
         "Num Spins per Customer": [num_spins],
         "Customers per Set": [num_customers],
@@ -137,7 +137,7 @@ if valid:
             avg_customer_eur = avg_customer_points * (promo_survival / 100.0)
         else:
             avg_customer_eur = avg_customer_points * point_eur
-        st.success(f"Average for {num_trials:,} customers spinning {num_spins}x: **{avg_customer_points:,.2f} points (€{avg_customer_eur:,.2f})**")
+        st.success(f"Average for {num_trials:,} customers spinning {num_spins}x: **{avg_customer_points:,.2f} points (ALL{avg_customer_eur:,.2f})**")
         st.write(f"- Min: {np.min(total_points_list):,.0f} points, Max: {np.max(total_points_list):,.0f} points")
 
     # --- 4. PIE CHART & BAR CHART ---
