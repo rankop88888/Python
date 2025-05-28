@@ -9,6 +9,7 @@ updated_script = """
 import streamlit as st
 import pandas as pd
 import json
+from pathlib import Path
 
 st.set_page_config(page_title="Mystery Jackpot AI Planner", layout="wide")
 st.title("Mystery Jackpot Planner with DeepSeek AI Optimization")
