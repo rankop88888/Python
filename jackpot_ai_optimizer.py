@@ -1,4 +1,11 @@
+# Prepare the corrected and enhanced Streamlit script with:
+# - Increment % input as true percentage
+# - Explanation and use of Trigger Value
+# - Validations
+# - Estimated payouts
+# - Cleaned display
 
+updated_script = """
 import streamlit as st
 import pandas as pd
 import json
@@ -14,7 +21,7 @@ st.sidebar.header("User Input")
 
 input_mode = st.sidebar.radio("Define by:", ["Total Turnover", "Target RTP %"])
 if input_mode == "Total Turnover":
-    turnover_per_day = st.sidebar.number_input("Total Turnover per Day (ALL)", value=100000)
+    turnover_per_day = st.sidebar.number_input("Total Turnover per Day (€)", value=100000)
     target_rtp_percent = None
 else:
     target_rtp_percent = st.sidebar.number_input("Target Overall RTP (%)", value=3.5)
@@ -28,20 +35,22 @@ preset_type = st.sidebar.selectbox("Desired Jackpot Behavior", options=["Normal"
 # -------------------------------
 
 st.subheader("Jackpot Level Configuration")
+st.markdown("🔍 **Trigger Value** = Turnover required for 1 JP hit. It affects frequency of jackpot hits per day.")
+
 level_data = []
 error_flag = False
 
 for level in range(1, num_levels + 1):
     st.markdown(f"### Level {level}")
-    min_value = st.number_input(f"Level {level} Minimum JP (ALL)", value=100 * level, key=f"min_{level}")
-    max_value = st.number_input(f"Level {level} Maximum JP (ALL)", value=500 * level, key=f"max_{level}")
-    start_value = st.number_input(f"Level {level} Start Value (ALL)", value=min_value, key=f"start_{level}")
-    end_value = st.number_input(f"Level {level} End Value (ALL)", value=max_value, key=f"end_{level}")
-    trigger_value = st.number_input(f"Level {level} Trigger Value (ALL)", value=(min_value + max_value) / 2, key=f"trigger_{level}")
-    user_percent = st.number_input("Increment %", value=5.0, step=0.1)
-    increment_ratio = user_percent / 100
+    min_value = st.number_input(f"Level {level} Minimum JP (€)", value=100 * level, key=f"min_{level}")
+    max_value = st.number_input(f"Level {level} Maximum JP (€)", value=500 * level, key=f"max_{level}")
+    start_value = st.number_input(f"Level {level} Start Value (€)", value=min_value, key=f"start_{level}")
+    end_value = st.number_input(f"Level {level} End Value (€)", value=max_value, key=f"end_{level}")
+    trigger_value = st.number_input(f"Level {level} Trigger Value (€)", value=(min_value + max_value) / 2, key=f"trigger_{level}")
+    increment_percent = st.number_input(f"Level {level} Increment %", value=5.0, step=0.1, format="%.2f", key=f"inc_{level}")
+    increment_ratio = increment_percent / 100
 
-
+    # --- Validations ---
     if min_value >= max_value:
         st.warning(f"Level {level}: Minimum must be less than Maximum.")
         error_flag = True
@@ -52,7 +61,7 @@ for level in range(1, num_levels + 1):
         st.warning(f"Level {level}: Trigger must be between Start and End.")
         error_flag = True
     if increment_ratio < 0:
-        st.warning(f"Level {level}: Increment Ratio must be non-negative.")
+        st.warning(f"Level {level}: Increment % must be non-negative.")
         error_flag = True
 
     level_data.append({
@@ -71,21 +80,24 @@ df = pd.DataFrame(level_data)
 # Section 3: Jackpot Calculations
 # -------------------------------
 
-if not error_flag:
-    if turnover_per_day:
-        df["Avg Hit Value"] = (df["Start Value"] + df["End Value"]) / 2
-        df["Hits per Day"] = turnover_per_day / df["Trigger Value"]
-        df["Hits per Week"] = df["Hits per Day"] * 7
-        df["Hits per Month"] = df["Hits per Day"] * 30
-        df["Real RTP (%)"] = ((df["Avg Hit Value"] * df["Hits per Day"]) / turnover_per_day) * 100
-        df["Real Cost (ALL)"] = df["Hits per Day"] * df["Avg Hit Value"]
-        df["JP Increment per Day (ALL)"] = df["Increment Ratio"] * turnover_per_day
+if not error_flag and turnover_per_day:
+    df["Avg Hit Value"] = (df["Start Value"] + df["End Value"]) / 2
+    df["Hits per Day"] = turnover_per_day / df["Trigger Value"]
+    df["Hits per Week"] = df["Hits per Day"] * 7
+    df["Hits per Month"] = df["Hits per Day"] * 30
+    df["Avg Days per Hit"] = 1 / df["Hits per Day"]
+    df["Real RTP (%)"] = ((df["Avg Hit Value"] * df["Hits per Day"]) / turnover_per_day) * 100
+    df["Real Cost (€)"] = df["Hits per Day"] * df["Avg Hit Value"]
+    df["JP Increment per Day (€)"] = df["Increment Ratio"] * turnover_per_day
+    df["Estimated JP Paid / Day (€)"] = df["Hits per Day"] * df["Avg Hit Value"]
+    df["Estimated JP Paid / Week (€)"] = df["Estimated JP Paid / Day (€)"] * 7
+    df["Estimated JP Paid / Month (€)"] = df["Estimated JP Paid / Day (€)"] * 30
 
-        st.subheader("Jackpot Level Analysis")
-        st.dataframe(df, use_container_width=True)
+    st.subheader("Jackpot Level Analysis")
+    st.dataframe(df, use_container_width=True)
 
-        st.success(f"Total Jackpot Increment per Day: ALL{df['JP Increment per Day (ALL)'].sum():,.2f}")
-        st.info(f"Total Real RTP from Jackpot: {df['Real RTP (%)'].sum():.2f}%")
+    st.success(f"Total JP Increment/Day: €{df['JP Increment per Day (€)'].sum():,.2f}")
+    st.info(f"Total Real RTP from Jackpot: {df['Real RTP (%)'].sum():.2f}%")
 
 # -------------------------------
 # Section 4: AI Prompt Builder
@@ -93,7 +105,7 @@ if not error_flag:
 
 def generate_ai_prompt():
     level_table = df[["Level", "Start Value", "End Value", "Trigger Value", "Min Value", "Max Value"]].to_dict(orient="records")
-    mode_text = f"Turnover = ALL{turnover_per_day}" if input_mode == "Total Turnover" else f"Target RTP = {target_rtp_percent}%"
+    mode_text = f"Turnover = €{turnover_per_day}" if input_mode == "Total Turnover" else f"Target RTP = {target_rtp_percent}%"
     return f'''
 You are an AI assistant for optimizing jackpot systems for electronic gaming machines (EGMs).
 
@@ -132,13 +144,7 @@ if not error_flag and st.button("Request AI Suggestion (DeepSeek R1)"):
     prompt = generate_ai_prompt()
     st.code(prompt, language="markdown")
 
-    # Example DeepSeek API call placeholder
-    # response = deepseek.chat(
-    #     model="deepseek-chat",
-    #     messages=[{"role": "user", "content": prompt}]
-    # )
-    # ai_output = response['choices'][0]['message']['content']
-
+    # Placeholder for DeepSeek integration
     ai_output = '''
     [
       { "Level": 1, "Recommended Increment Ratio": 0.08 },
@@ -160,3 +166,10 @@ if not error_flag and st.button("Request AI Suggestion (DeepSeek R1)"):
         st.dataframe(df, use_container_width=True)
     except Exception as e:
         st.error(f"Failed to parse AI output: {e}")
+"""
+
+# Save the updated script to file
+final_script_path = Path("/mnt/data/jackpot_ai_final.py")
+final_script_path.write_text(updated_script)
+
+final_script_path.name
