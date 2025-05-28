@@ -169,7 +169,7 @@ if not error_flag and st.button("Request AI Suggestion (DeepSeek R1)"):
 """
 
 # Save the updated script to file
-final_script_path = Path("/mnt/data/jackpot_ai_final.py")
+final_script_path = Path("/mnt/data/jackpot_ai_optimizer.py")
 final_script_path.write_text(updated_script)
 
 final_script_path.name
