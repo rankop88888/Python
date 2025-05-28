@@ -38,7 +38,9 @@ for level in range(1, num_levels + 1):
     start_value = st.number_input(f"Level {level} Start Value (ALL)", value=min_value, key=f"start_{level}")
     end_value = st.number_input(f"Level {level} End Value (ALL)", value=max_value, key=f"end_{level}")
     trigger_value = st.number_input(f"Level {level} Trigger Value (ALL)", value=(min_value + max_value) / 2, key=f"trigger_{level}")
-    increment_ratio = st.number_input(f"Level {level} Increment Ratio", value=0.05, step=0.01, format="%.3f", key=f"inc_{level}")
+    user_percent = st.number_input("Increment %", value=5.0, step=0.1)
+    increment_ratio = user_percent / 100
+
 
     if min_value >= max_value:
         st.warning(f"Level {level}: Minimum must be less than Maximum.")
