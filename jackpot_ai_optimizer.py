@@ -14,7 +14,7 @@ st.sidebar.header("User Input")
 
 input_mode = st.sidebar.radio("Define by:", ["Total Turnover", "Target RTP %"])
 if input_mode == "Total Turnover":
-    turnover_per_day = st.sidebar.number_input("Total Turnover per Day (€)", value=100000)
+    turnover_per_day = st.sidebar.number_input("Total Turnover per Day (ALL)", value=100000)
     target_rtp_percent = None
 else:
     target_rtp_percent = st.sidebar.number_input("Target Overall RTP (%)", value=3.5)
@@ -33,11 +33,11 @@ error_flag = False
 
 for level in range(1, num_levels + 1):
     st.markdown(f"### Level {level}")
-    min_value = st.number_input(f"Level {level} Minimum JP (€)", value=100 * level, key=f"min_{level}")
-    max_value = st.number_input(f"Level {level} Maximum JP (€)", value=500 * level, key=f"max_{level}")
-    start_value = st.number_input(f"Level {level} Start Value (€)", value=min_value, key=f"start_{level}")
-    end_value = st.number_input(f"Level {level} End Value (€)", value=max_value, key=f"end_{level}")
-    trigger_value = st.number_input(f"Level {level} Trigger Value (€)", value=(min_value + max_value) / 2, key=f"trigger_{level}")
+    min_value = st.number_input(f"Level {level} Minimum JP (ALL)", value=100 * level, key=f"min_{level}")
+    max_value = st.number_input(f"Level {level} Maximum JP (ALL)", value=500 * level, key=f"max_{level}")
+    start_value = st.number_input(f"Level {level} Start Value (ALL)", value=min_value, key=f"start_{level}")
+    end_value = st.number_input(f"Level {level} End Value (ALL)", value=max_value, key=f"end_{level}")
+    trigger_value = st.number_input(f"Level {level} Trigger Value (ALL)", value=(min_value + max_value) / 2, key=f"trigger_{level}")
     increment_ratio = st.number_input(f"Level {level} Increment Ratio", value=0.05, step=0.01, format="%.3f", key=f"inc_{level}")
 
     if min_value >= max_value:
@@ -76,13 +76,13 @@ if not error_flag:
         df["Hits per Week"] = df["Hits per Day"] * 7
         df["Hits per Month"] = df["Hits per Day"] * 30
         df["Real RTP (%)"] = ((df["Avg Hit Value"] * df["Hits per Day"]) / turnover_per_day) * 100
-        df["Real Cost (€)"] = df["Hits per Day"] * df["Avg Hit Value"]
-        df["JP Increment per Day (€)"] = df["Increment Ratio"] * turnover_per_day
+        df["Real Cost (ALL)"] = df["Hits per Day"] * df["Avg Hit Value"]
+        df["JP Increment per Day (ALL)"] = df["Increment Ratio"] * turnover_per_day
 
         st.subheader("Jackpot Level Analysis")
         st.dataframe(df, use_container_width=True)
 
-        st.success(f"Total Jackpot Increment per Day: €{df['JP Increment per Day (€)'].sum():,.2f}")
+        st.success(f"Total Jackpot Increment per Day: ALL{df['JP Increment per Day (ALL)'].sum():,.2f}")
         st.info(f"Total Real RTP from Jackpot: {df['Real RTP (%)'].sum():.2f}%")
 
 # -------------------------------
@@ -91,7 +91,7 @@ if not error_flag:
 
 def generate_ai_prompt():
     level_table = df[["Level", "Start Value", "End Value", "Trigger Value", "Min Value", "Max Value"]].to_dict(orient="records")
-    mode_text = f"Turnover = €{turnover_per_day}" if input_mode == "Total Turnover" else f"Target RTP = {target_rtp_percent}%"
+    mode_text = f"Turnover = ALL{turnover_per_day}" if input_mode == "Total Turnover" else f"Target RTP = {target_rtp_percent}%"
     return f'''
 You are an AI assistant for optimizing jackpot systems for electronic gaming machines (EGMs).
 
