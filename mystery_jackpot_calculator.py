@@ -1,79 +1,138 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+from io import BytesIO
 
+st.set_page_config("Mystery JP Calculator", layout="wide")
 st.title("🎰 Mystery Jackpot Contribution Calculator")
 
-st.markdown("""
-This tool calculates contribution percentage, hit frequency (in days), and average hit value for each mystery jackpot level.
+# ─────────────────────────────────────────────────────
+# Helper for thousands-separator “1.000” style
+# ─────────────────────────────────────────────────────
+def fmt_int(n: float | int) -> str:
+    return f"{int(n):,}".replace(",", ".")          # 1000000 → "1.000.000"
 
----  
-""")
+# ─────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────
+st.sidebar.header("🧮 Levels")
+num_levels = st.sidebar.number_input("Number of Levels", 1, 15, 1, 1)
 
-st.sidebar.header("🧮 Add Jackpot Levels")
+records = []           # raw numeric data for maths
+display_rows = []      # pretty-formatted strings for the table
 
-# Container to hold jackpot level inputs
-jp_levels = []
+for lvl in range(1, num_levels + 1):
+    c1, c2, c3, c4, c5 = st.columns([2, 2, 2, 2, 1.5], gap="small")
+    with c1:
+        coin_in = st.number_input(f"Coin-In L{lvl}", 0, step=1, format="%d")
+    with c2:
+        initial = st.number_input(f"Initial JP L{lvl}", 0, step=1, format="%d")
+    with c3:
+        min_hit = st.number_input(f"Min Hit L{lvl}", 0, step=1, format="%d")
+    with c4:
+        max_hit = st.number_input(f"Max Hit L{lvl}", 0, step=1, format="%d")
+    with c5:
+        contrib_pct = st.number_input(
+            f"% L{lvl}", 0.0, 100.0, step=0.01, format="%.2f"
+        )
 
-# Default number of JP levels
-num_levels = st.sidebar.number_input("Number of Jackpot Levels", min_value=1, max_value=10, value=1, step=1)
+    # ── maths per level ──────────────────────────────
+    avg_hit = (min_hit + max_hit) / 2.0
+    daily_contrib = coin_in * (contrib_pct / 100)
+    build_amount = max(avg_hit - initial, 0)        # funded by players
+    hit_days = build_amount / daily_contrib if daily_contrib else float("inf")
 
-for i in range(num_levels):
-    st.subheader(f"Jackpot Level {i+1}")
-    with st.container():
-        col1, col2 = st.columns(2)
-        with col1:
-            coin_in = st.number_input(f"Average Daily Coin-In (Level {i+1})", min_value=0.01, step=0.01, format="%.2f")
-            initial_value = st.number_input(f"Initial Jackpot Value (Level {i+1})", min_value=0.0, step=0.01, format="%.2f")
-            min_hit = st.number_input(f"Min Hit Value (Level {i+1})", min_value=0.0, step=0.01, format="%.2f")
-        with col2:
-            max_hit = st.number_input(f"Max Hit Value (Level {i+1})", min_value=0.0, step=0.01, format="%.2f")
-            contribution_pct = st.number_input(f"Contribution % (Level {i+1})", min_value=0.0, max_value=100.0, step=0.01, format="%.2f")
+    # Effective player % to fund **entire** jackpot (initial + build)
+    eff_pct = (
+        contrib_pct * (avg_hit / build_amount) if build_amount else 0.0
+    )
 
-    jp_levels.append({
-        'level': i + 1,
-        'coin_in': coin_in,
-        'initial_value': initial_value,
-        'min_hit': min_hit,
-        'max_hit': max_hit,
-        'contribution_pct': contribution_pct
-    })
+    records.append(
+        dict(
+            Level=lvl,
+            CoinIn=coin_in,
+            Initial=initial,
+            MinHit=min_hit,
+            MaxHit=max_hit,
+            AvgHit=avg_hit,
+            RawPct=contrib_pct,
+            EffPct=eff_pct,
+            HitDays=hit_days,
+        )
+    )
 
-# Calculate results
-results = []
-total_contribution_pct = 0.0
+    display_rows.append(
+        dict(
+            Level=lvl,
+            "Avg Coin-In": fmt_int(coin_in),
+            "Initial JP": fmt_int(initial),
+            "Min Hit": fmt_int(min_hit),
+            "Max Hit": fmt_int(max_hit),
+            "Avg Hit": fmt_int(avg_hit),
+            "Raw %": f"{contrib_pct:.2f}",
+            "Eff %": f"{eff_pct:.2f}",
+            "Hit Days": f"{hit_days:.2f}",
+        )
+    )
 
-for level_data in jp_levels:
-    coin_in = level_data['coin_in']
-    min_hit = level_data['min_hit']
-    max_hit = level_data['max_hit']
-    contribution_pct = level_data['contribution_pct']
+# ─────────────────────────────────────────────────────
+# Results table
+# ─────────────────────────────────────────────────────
+if display_rows:
+    st.markdown("### 📊 Level Summary")
+    df_show = pd.DataFrame(display_rows)
+    st.dataframe(df_show, use_container_width=True)
 
-    avg_hit = (min_hit + max_hit) / 2
-    daily_contribution = coin_in * (contribution_pct / 100)
-    hit_in_days = avg_hit / daily_contribution if daily_contribution > 0 else float('inf')
+    total_raw = sum(r["RawPct"] for r in records)
+    total_eff = sum(r["EffPct"] for r in records)
 
-    total_contribution_pct += contribution_pct
+    st.markdown(
+        f"**Total Raw %:** {total_raw:.2f} &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"**Total Effective % (incl. seed & min):** {total_eff:.2f}"
+    )
 
-    results.append({
-        'Level': level_data['level'],
-        'Average Daily Coin-In': coin_in,
-        'Initial JP Value': level_data['initial_value'],
-        'Min Hit Value': min_hit,
-        'Max Hit Value': max_hit,
-        'Avg Hit Value': round(avg_hit, 2),
-        'Contribution %': contribution_pct,
-        'Hit Frequency (Days)': round(hit_in_days, 2)
-    })
+# ─────────────────────────────────────────────────────
+# Charts
+# ─────────────────────────────────────────────────────
+if any(r["CoinIn"] for r in records):
 
-# Display Results
-st.markdown("## 📊 Jackpot Levels Summary")
+    def bar_chart(x, y, title, ylab):
+        fig, ax = plt.subplots()
+        ax.bar(x, y)
+        ax.set_title(title)
+        ax.set_xlabel("Level")
+        ax.set_ylabel(ylab)
+        fig.tight_layout()
+        return fig
 
-df = pd.DataFrame(results)
-st.dataframe(df, use_container_width=True)
+    levels = [r["Level"] for r in records]
 
-st.markdown(f"### 💡 Total Contribution Percentage: **{round(total_contribution_pct, 2)}%**")
+    colA, colB = st.columns(2)
+    with colA:
+        fig1 = bar_chart(levels, [r["RawPct"] for r in records],
+                         "Raw Contribution %", "%")
+        st.pyplot(fig1)
+    with colB:
+        fig2 = bar_chart(levels, [r["EffPct"] for r in records],
+                         "Effective % (Seed + Min)", "%")
+        st.pyplot(fig2)
 
-if total_contribution_pct > 5.0:
-    st.warning("⚠️ Total contribution exceeds 5%. Review each level's contribution %.")
-elif total_contribution_pct == 0.0:
-    st.error("❌ Contribution % is zero. Check your inputs.")
+    fig3 = bar_chart(levels, [r["HitDays"] for r in records],
+                     "Hit Frequency (Days)", "Days")
+    st.pyplot(fig3)
+
+    # ── download PNGs ──
+    for name, fig in [
+        ("raw_pct.png", fig1),
+        ("effective_pct.png", fig2),
+        ("hit_days.png", fig3),
+    ]:
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.download_button(
+            f"⬇️ {name}",
+            buf.getvalue(),
+            file_name=name,
+            mime="image/png",
+            key=name,
+        )
