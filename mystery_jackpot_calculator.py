@@ -344,7 +344,7 @@ def initialize_session_state():
             {"coin": "", "init": "", "min": "", "max": "", "pct": "0.00"}
         ]
     if "currency" not in st.session_state:
-        st.session_state.currency = "$"
+        st.session_state.currency = " "
     if "show_advanced" not in st.session_state:
         st.session_state.show_advanced = False
 
@@ -361,7 +361,7 @@ def load_configuration(config_json: str) -> bool:
     """Load configuration from JSON string."""
     try:
         config = json.loads(config_json)
-        st.session_state.currency = config.get("currency", "$")
+        st.session_state.currency = config.get("currency", " ")
         st.session_state.levels_data = config.get("levels", [])
         return True
     except (json.JSONDecodeError, KeyError):
@@ -384,7 +384,7 @@ def main():
         st.header("⚙️ Configuration")
         
         # Currency selection
-        currency_options = ["$", "€", "£", "¥", "₹", "Custom"]
+        currency_options = ["ISK","$", "€", "£", "¥", "₹", "Custom"]
         current_currency = st.session_state.currency
         if current_currency in currency_options:
             currency_index = currency_options.index(current_currency)
