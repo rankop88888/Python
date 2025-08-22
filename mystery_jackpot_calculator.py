@@ -6,11 +6,46 @@ from io import BytesIO
 st.set_page_config("Mystery JP Calculator", layout="wide")
 st.title("🎰 Mystery Jackpot Contribution Calculator")
 
-# ─────────────────────────────────────────────────────
-# Helper for thousands-separator “1.000” style
-# ─────────────────────────────────────────────────────
-def fmt_int(n: float | int) -> str:
-    return f"{int(n):,}".replace(",", ".")          # 1000000 → "1.000.000"
+# ──────────────────────────────────────────────────────────────
+# 1) Helper   «1.000» thousands-separator, no decimals
+# ──────────────────────────────────────────────────────────────
+def fmt_dot_sep(n: float | int) -> str:
+    """Return e.g. 1234567 → '1.234.567' (dot every 3 digits)."""
+    return f"{int(round(n, 0)):,}".replace(",", ".")
+
+# ………………………………………………………………………………………………………………………
+# inside the main loop – keep maths exactly as before … then:
+
+display_rows.append(
+    {
+        "Level": lvl,
+        "Avg Coin-In":   fmt_dot_sep(coin_in),
+        "Initial JP":    fmt_dot_sep(initial),
+        "Min Hit":       fmt_dot_sep(min_hit),
+        "Max Hit":       fmt_dot_sep(max_hit),
+        "Avg Hit":       fmt_dot_sep(avg_hit),
+        "Raw %": f"{contrib_pct:.2f}",
+        "Eff %": f"{eff_pct:.2f}",
+        "Hit Days": f"{hit_days:.2f}",
+    }
+)
+
+# ──────────────────────────────────────────────────────────────
+# 2) Results table – just after the loop finishes
+# ──────────────────────────────────────────────────────────────
+if display_rows:
+    st.markdown("### 📊 Level Summary")
+    df_show = pd.DataFrame(display_rows)        # ALL columns are strings now
+    st.dataframe(df_show, use_container_width=True)
+
+    total_raw = sum(r["RawPct"] for r in records)
+    total_eff = sum(r["EffPct"] for r in records)
+
+    st.markdown(
+        f"**Total Raw % :** {total_raw:.2f} &nbsp;|&nbsp; "
+        f"**Total Effective % :** {total_eff:.2f}"
+    )
+
 
 # ─────────────────────────────────────────────────────
 # Inputs
