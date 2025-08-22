@@ -47,33 +47,34 @@ for lvl in range(1, num_levels + 1):
         contrib_pct * (avg_hit / build_amount) if build_amount else 0.0
     )
 
-    records.append(
-        dict(
-            Level=lvl,
-            CoinIn=coin_in,
-            Initial=initial,
-            MinHit=min_hit,
-            MaxHit=max_hit,
-            AvgHit=avg_hit,
-            RawPct=contrib_pct,
-            EffPct=eff_pct,
-            HitDays=hit_days,
-        )
-    )
+    # ── inside the main level loop ──────────────────────────────
+records.append(
+    {                           # <─ use {} instead of dict()
+        "Level": lvl,
+        "CoinIn": coin_in,
+        "Initial": initial,
+        "MinHit": min_hit,
+        "MaxHit": max_hit,
+        "AvgHit": avg_hit,
+        "RawPct": contrib_pct,
+        "EffPct": eff_pct,
+        "HitDays": hit_days,
+    }
+)
 
-    display_rows.append(
-        dict(
-            Level=lvl,
-            "Avg Coin-In": fmt_int(coin_in),
-            "Initial JP": fmt_int(initial),
-            "Min Hit": fmt_int(min_hit),
-            "Max Hit": fmt_int(max_hit),
-            "Avg Hit": fmt_int(avg_hit),
-            "Raw %": f"{contrib_pct:.2f}",
-            "Eff %": f"{eff_pct:.2f}",
-            "Hit Days": f"{hit_days:.2f}",
-        )
-    )
+display_rows.append(
+    {                           # <─ same change here
+        "Level": lvl,
+        "Avg Coin-In": fmt_int(coin_in),
+        "Initial JP": fmt_int(initial),
+        "Min Hit": fmt_int(min_hit),
+        "Max Hit": fmt_int(max_hit),
+        "Avg Hit": fmt_int(avg_hit),
+        "Raw %": f"{contrib_pct:.2f}",
+        "Eff %": f"{eff_pct:.2f}",
+        "Hit Days": f"{hit_days:.2f}",
+    }
+)
 
 # ─────────────────────────────────────────────────────
 # Results table
