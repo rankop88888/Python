@@ -1,131 +1,167 @@
-#  ────────────────────────────────────────────────────────────
-#  Mystery Jackpot Contribution Calculator  •  Streamlit
-#  ────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+#  Mystery Jackpot Contribution Calculator  –  full script
+# ─────────────────────────────────────────────────────────────
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+import re
 
 st.set_page_config("Mystery JP Calculator", layout="wide")
 st.title("🎰 Mystery Jackpot Contribution Calculator")
 
-# ────────────────────────────────────────────────────────────
-# Helper – 1.000.000 style (dot for thousands, no decimals)
-# ────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────
+DOT_GROUPS = re.compile(r"[.\s,]")
+
+def parse_dot_int(text: str) -> int:
+    """Convert '1.234.567'  or '1 234 567'  →  1234567."""
+    text = DOT_GROUPS.sub("", text)
+    return int(text) if text.isdigit() else 0
+
 def fmt_dot(n: float | int) -> str:
-    """Return e.g. 1234567 → '1.234.567'."""
+    """1234567 → '1.234.567'  (no decimals)."""
     return f"{int(round(n)):,}".replace(",", ".")
 
-# ────────────────────────────────────────────────────────────
-# Sidebar – how many levels?
-# ────────────────────────────────────────────────────────────
-st.sidebar.header("🧮 Levels")
-num_levels = st.sidebar.number_input("Number of Levels", 1, 15, 1, 1)
+def bar_chart(xs, ys, title, ylab):
+    fig, ax = plt.subplots()
+    ax.bar(xs, ys)
+    ax.set_title(title)
+    ax.set_xlabel("Level")
+    ax.set_ylabel(ylab)
+    fig.tight_layout()
+    return fig
 
-records: list[dict] = []      # numeric for maths / charts
-display_rows: list[dict] = [] # pretty strings for the table
+# ─────────────────────────────────────────────────────────────
+# Session state  –  list of level-dicts with TEXT values
+# ─────────────────────────────────────────────────────────────
+if "levels" not in st.session_state:
+    st.session_state.levels = [
+        dict(coin="", init="", min="", max="", pct="0.00")
+    ]
 
-# ────────────────────────────────────────────────────────────
-# One horizontal row of inputs per level
-# ────────────────────────────────────────────────────────────
-for lvl in range(1, num_levels + 1):
-    col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1.6], gap="small")
+# Buttons to add / remove rows
+col_add, col_del = st.columns(2)
+with col_add:
+    if st.button("➕ Add Level"):
+        st.session_state.levels.append(
+            dict(coin="", init="", min="", max="", pct="0.00")
+        )
+with col_del:
+    if st.button("➖ Remove Last", disabled=len(st.session_state.levels) == 1):
+        st.session_state.levels.pop()
 
-    with col1:
-        coin_in = st.number_input(f"Coin-In  L{lvl}", 0, step=1, format="%d")
-    with col2:
-        initial = st.number_input(f"Initial JP  L{lvl}", 0, step=1, format="%d")
-    with col3:
-        min_hit = st.number_input(f"Min Hit  L{lvl}", 0, step=1, format="%d")
-    with col4:
-        max_hit = st.number_input(f"Max Hit  L{lvl}", 0, step=1, format="%d")
-    with col5:
-        pct = st.number_input(f"%  L{lvl}", 0.0, 100.0, step=0.01, format="%.2f")
+# ─────────────────────────────────────────────────────────────
+# Input grid  –  one horizontal row per level
+# ─────────────────────────────────────────────────────────────
+records, disp_rows = [], []
 
-    # ─ calculations ─
-    avg_hit      = (min_hit + max_hit) / 2.0
-    build_amount = max(avg_hit - initial, 0)         # only what players must grow
-    daily_cont   = coin_in * (pct / 100)
-    hit_days     = build_amount / daily_cont if daily_cont else float("inf")
+for idx, lvl in enumerate(st.session_state.levels, 1):
+    c1, c2, c3, c4, c5 = st.columns([2.2, 2.2, 2.2, 2.2, 1.6], gap="small")
 
-    eff_pct = pct * (avg_hit / build_amount) if build_amount else 0.0
+    with c1:
+        lvl["coin"] = st.text_input(
+            f"Coin-In L{idx}", lvl["coin"], key=f"coin{idx}"
+        )
+    with c2:
+        lvl["init"] = st.text_input(
+            f"Initial JP L{idx}", lvl["init"], key=f"init{idx}"
+        )
+    with c3:
+        lvl["min"] = st.text_input(
+            f"Min Hit L{idx}", lvl["min"], key=f"min{idx}"
+        )
+    with c4:
+        lvl["max"] = st.text_input(
+            f"Max Hit L{idx}", lvl["max"], key=f"max{idx}"
+        )
+    with c5:
+        lvl["pct"] = st.text_input(
+            f"% L{idx}", lvl["pct"], key=f"pct{idx}"
+        )
 
-    records.append({
-        "Level": lvl,
-        "CoinIn": coin_in,
-        "Initial": initial,
-        "MinHit": min_hit,
-        "MaxHit": max_hit,
-        "AvgHit": avg_hit,
-        "RawPct": pct,
-        "EffPct": eff_pct,
-        "HitDays": hit_days,
-    })
+    # Parse to integers / float for maths
+    coin   = parse_dot_int(lvl["coin"])
+    init   = parse_dot_int(lvl["init"])
+    minhit = parse_dot_int(lvl["min"])
+    maxhit = parse_dot_int(lvl["max"])
 
-    display_rows.append({
-        "Level": lvl,
-        "Avg Coin-In": fmt_dot(coin_in),
-        "Initial JP": fmt_dot(initial),
-        "Min Hit": fmt_dot(min_hit),
-        "Max Hit": fmt_dot(max_hit),
-        "Avg Hit": fmt_dot(avg_hit),
-        "Raw %": f"{pct:.2f}",
-        "Eff %": f"{eff_pct:.2f}",
-        "Hit Days": f"{hit_days:.2f}",
-    })
+    try:
+        pct = float(lvl["pct"].replace(",", "."))
+    except ValueError:
+        pct = 0.0
 
-# ────────────────────────────────────────────────────────────
-# Result table
-# ────────────────────────────────────────────────────────────
-if display_rows:
-    st.markdown("### 📊 Level Summary")
-    st.dataframe(pd.DataFrame(display_rows), use_container_width=True)
+    # Calculations
+    avg_hit   = (minhit + maxhit) / 2.0
+    build_amt = max(avg_hit - init, 0)
+    daily_val = coin * (pct / 100)
+    hit_days  = build_amt / daily_val if daily_val else float("inf")
+    eff_pct   = pct * (avg_hit / build_amt) if build_amt else 0.0
 
-    total_raw = sum(r["RawPct"] for r in records)
-    total_eff = sum(r["EffPct"] for r in records)
-    st.markdown(
-        f"**Total Raw %:** {total_raw:.2f} &nbsp; | &nbsp; "
-        f"**Total Effective %:** {total_eff:.2f}"
+    records.append(
+        dict(Level=idx, Coin=coin, Init=init, Min=minhit, Max=maxhit,
+             Avg=avg_hit, Raw=pct, Eff=eff_pct, Days=hit_days)
     )
 
-# ────────────────────────────────────────────────────────────
-# Charts (only if we have any coin-in > 0)
-# ────────────────────────────────────────────────────────────
-if any(r["CoinIn"] for r in records):
-    def bar(x, y, title, ylab):
-        fig, ax = plt.subplots()
-        ax.bar(x, y)
-        ax.set_title(title)
-        ax.set_xlabel("Level")
-        ax.set_ylabel(ylab)
-        fig.tight_layout()
-        return fig
+    disp_rows.append(
+        dict(
+            Level=idx,
+            **{
+                "Avg Coin-In": fmt_dot(coin),
+                "Initial JP": fmt_dot(init),
+                "Min Hit":    fmt_dot(minhit),
+                "Max Hit":    fmt_dot(maxhit),
+                "Avg Hit":    fmt_dot(avg_hit),
+            },
+            **{
+                "Raw %": f"{pct:.2f}",
+                "Eff %": f"{eff_pct:.2f}",
+                "Hit Days": f"{hit_days:.2f}",
+            }
+        )
+    )
 
+# ─────────────────────────────────────────────────────────────
+# Results table & totals
+# ─────────────────────────────────────────────────────────────
+if disp_rows:
+    st.markdown("### 📊 Level Summary")
+    st.dataframe(pd.DataFrame(disp_rows), use_container_width=True)
+
+    tot_raw = sum(r["Raw"] for r in records)
+    tot_eff = sum(r["Eff"] for r in records)
+    st.markdown(
+        f"**Total Raw %:** {tot_raw:.2f} &nbsp;|&nbsp; "
+        f"**Total Effective %:** {tot_eff:.2f}"
+    )
+
+# ─────────────────────────────────────────────────────────────
+# Charts + downloads
+# ─────────────────────────────────────────────────────────────
+if any(r["Coin"] for r in records):
     levels = [r["Level"] for r in records]
 
     colA, colB = st.columns(2)
     with colA:
-        fig1 = bar(levels, [r["RawPct"] for r in records], "Raw Contribution %", "%")
-        st.pyplot(fig1)
+        fig_raw = bar_chart(levels, [r["Raw"] for r in records],
+                            "Raw Contribution %", "%")
+        st.pyplot(fig_raw)
     with colB:
-        fig2 = bar(levels, [r["EffPct"] for r in records], "Effective % (Seed + Min)", "%")
-        st.pyplot(fig2)
+        fig_eff = bar_chart(levels, [r["Eff"] for r in records],
+                            "Effective % (Seed + Min)", "%")
+        st.pyplot(fig_eff)
 
-    fig3 = bar(levels, [r["HitDays"] for r in records], "Hit Frequency (Days)", "Days")
-    st.pyplot(fig3)
+    fig_days = bar_chart(levels, [r["Days"] for r in records],
+                         "Hit Frequency (Days)", "Days")
+    st.pyplot(fig_days)
 
-    # downloads
-    for fname, fig in [
-        ("raw_pct.png", fig1),
-        ("effective_pct.png", fig2),
-        ("hit_days.png", fig3),
-    ]:
+    for name, fig in [("raw_pct.png", fig_raw),
+                      ("effective_pct.png", fig_eff),
+                      ("hit_days.png", fig_days)]:
         buf = BytesIO()
         fig.savefig(buf, format="png")
         st.download_button(
-            f"⬇️ {fname}",
-            buf.getvalue(),
-            file_name=fname,
-            mime="image/png",
-            key=fname,
+            f"⬇️ {name}", buf.getvalue(),
+            file_name=name, mime="image/png", key=name
         )
