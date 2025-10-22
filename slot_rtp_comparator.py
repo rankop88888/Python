@@ -1,4 +1,11 @@
-import math
+with st.expander("💭 Example Use Cases"):
+    st.markdown("""
+    - **Casino Operators**: Verify measured RTP and hit rate match theoretical values
+    - **Players**: Understand sample sizes needed to assess machine performance and volatility
+    - **Regulators**: Determine appropriate testing sample sizes for compliance
+    - **Game Developers**: Design volatility profiles and hit rate targets; understand measurement precision
+    - **Game Comparison**: Evaluate whether differences in hit rate or RTP between machines are statistically meaningful
+    """)import math
 from typing import List, Tuple
 
 import numpy as np
@@ -609,4 +616,32 @@ with st.expander("📖 Methodology & Concepts"):
     ### Hold Percentage vs RTP
     - **RTP (Return to Player)**: Expected percentage returned to players over time
     - **Hold Percentage**: House edge, calculated as 100% - RTP
-    - Example
+    - Example: RTP 95.08% = Hold 4.92%
+    
+    ### Volatility Index vs Standard Deviation
+    - **Volatility Index (VI)**: Industry-standard measure representing typical outcome range at a given confidence level
+        - Low volatility: VI = 1-5 (classic slots, frequent small wins)
+        - Medium volatility: VI = 5-10 (balanced gameplay)
+        - High volatility: VI = 10-15+ (progressive jackpots, rare big wins)
+    - **Standard Deviation (SD)**: Raw statistical measure of variability per spin
+    - **Conversion**: VI = SD × z-score (at current confidence level: z = {z:.3f})
+    
+    ### Statistical Method
+    - **RTP Confidence Intervals**: mean ± z × (SD / √n)
+    - **Hit Rate Confidence Intervals**: p ± z × √(p(1-p)/n)
+    - **Current confidence level**: {int(conf*100)}%
+    - **Assumptions**: 
+        - Spins are independent
+        - Large enough sample for Central Limit Theorem (typically n > 30)
+        - For hit rate: np and n(1-p) both ≥ 5
+    
+    ### Interpretation
+    - **CI Overlap**: Overlapping intervals suggest differences may be due to chance
+    - **Pulls to Distinguish**: Sample size where confidence intervals stop overlapping
+    - **Hit Rate vs RTP**: Hit rate measures frequency of wins; RTP measures average return amount
+    
+    ### Limitations
+    - Assumes known population parameters
+    - Normal approximation less accurate for very small samples or extreme proportions
+    - Doesn't account for bonus features, progressive jackpots, or complex game mechanics
+    """)
