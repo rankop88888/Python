@@ -1,11 +1,4 @@
-with st.expander("💭 Example Use Cases"):
-    st.markdown("""
-    - **Casino Operators**: Verify measured RTP and hit rate match theoretical values
-    - **Players**: Understand sample sizes needed to assess machine performance and volatility
-    - **Regulators**: Determine appropriate testing sample sizes for compliance
-    - **Game Developers**: Design volatility profiles and hit rate targets; understand measurement precision
-    - **Game Comparison**: Evaluate whether differences in hit rate or RTP between machines are statistically meaningful
-    """)import math
+import math
 from typing import List, Tuple
 
 import numpy as np
@@ -55,7 +48,6 @@ def ci_for_proportion(p: float, n: int, z: float) -> Tuple[float, float]:
     """Calculate confidence interval for hit rate (proportion) using normal approximation."""
     if n <= 0 or p < 0 or p > 1:
         return (np.nan, np.nan)
-    # Standard error for proportion
     se = math.sqrt(p * (1 - p) / n)
     lo = p - z * se
     hi = p + z * se
@@ -185,15 +177,12 @@ def plot_hitrate_comparison(ax, hr1: float, hr2: float, n: int, name1: str, name
     ax.set_title(f"Hit Rate Sampling Distributions at n={n:,} spins", fontsize=11, fontweight='bold')
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
-    
-    # Format x-axis as percentages
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x*100:.1f}%'))
 
 # ---------- UI ----------
 st.title("🎰 Slot Machine RTP Comparator")
 st.markdown("Compare the statistical reliability of RTP and hit rate measurements across different slot machines.")
 
-# Initialize session state
 if 'pulls' not in st.session_state:
     st.session_state.pulls = [10000, 100000, 1000000, 10000000]
 if 'run_analysis' not in st.session_state:
@@ -213,7 +202,6 @@ with st.sidebar:
 
     st.markdown("**Number of Hand Pulls**")
     
-    # Preset options
     preset_options = {
         "Small Scale (10K - 100K)": [10000, 50000, 100000],
         "Medium Scale (100K - 1M)": [100000, 500000, 1000000],
@@ -230,7 +218,6 @@ with st.sidebar:
     )
     
     if preset == "Custom":
-        # Multi-select for custom
         available_sizes = [10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 
                           500000, 1000000, 5000000, 10000000, 50000000, 100000000]
         pulls = st.multiselect(
@@ -244,7 +231,6 @@ with st.sidebar:
         pulls = preset_options[preset]
         st.info(f"📊 Selected sizes: {', '.join([f'{p:,}' for p in pulls])}")
     
-    # Option to add individual custom size
     with st.expander("➕ Add Individual Size"):
         custom_pull = st.number_input(
             "Custom pull count", 
@@ -262,16 +248,13 @@ with st.sidebar:
     st.divider()
     st.caption("💡 **RTP** = Return to Player (%). **Hold %** = House edge. **VI** = Volatility Index.")
 
-# Validate pulls
 if not pulls or len(pulls) == 0:
     st.error("❌ Please select at least one sample size")
     st.stop()
 
-# Game input columns
 colA, colB = st.columns(2, gap="large")
 
 def game_input_block(col, game_id: str, default_name: str, default_rtp: float, default_vi: float, default_hr: float):
-    """Create input block for a single game."""
     with col:
         st.subheader(f"🎮 {default_name}")
         name = st.text_input(
@@ -281,7 +264,6 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
             help="Identifier for this slot machine"
         )
         
-        # Option to enter RTP or Hold Percentage
         input_method = st.radio(
             "Input Method",
             ["RTP (%)", "Hold Percentage (%)"],
@@ -362,51 +344,43 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
             st.caption(f"📊 Calculated Volatility Index: {vi:.3f}")
         
         if vi > 15:
-            st.warning("⚠️ Very high volatility - unusual for most slot machines")
+            st.warning("⚠️ Very high volatility")
         if rtp_pct > 100:
             st.info("ℹ️ RTP > 100% means player advantage")
         if hit_rate > 0.5:
-            st.info("ℹ️ High hit rate (>50%) - frequent small wins expected")
+            st.info("ℹ️ High hit rate (>50%)")
             
     return name, rtp_pct, sd_pct, hit_rate
 
 nameA, rtpA, sdA, hrA = game_input_block(colA, "A", "Game A", 95.08, 5.795, 25.0)
 nameB, rtpB, sdB, hrB = game_input_block(colB, "B", "Game B", 95.08, 5.795, 25.0)
 
-# Validate inputs
 if sdA <= 0 or sdB <= 0:
     st.error("❌ Volatility/SD must be greater than 0")
     st.stop()
 
-# Run Analysis Button
 st.markdown("---")
 run_col1, run_col2, run_col3 = st.columns([1, 1, 1])
 with run_col2:
     if st.button("🚀 Run Analysis", type="primary", use_container_width=True):
         st.session_state.run_analysis = True
 
-# Only show results if analysis has been run
 if not st.session_state.run_analysis:
     st.info("👆 Configure your games above and click **Run Analysis** to see results")
     st.stop()
 
-# ---------- Analysis ----------
 st.markdown("---")
 
-# Create tabs for RTP and Hit Rate analysis
 tab1, tab2 = st.tabs(["📊 RTP Analysis", "🎯 Hit Rate Analysis"])
 
 with tab1:
     st.header("RTP Statistical Analysis")
     
-    # Calculate tables
     tableA = ci_table(nameA, rtpA, sdA, pulls, z)
     tableB = ci_table(nameB, rtpB, sdB, pulls, z)
     
-    # Merge and add overlap analysis
     comparison = tableA.merge(tableB, on="Pulls", suffixes=(f" ({nameA})", f" ({nameB})"))
     
-    # Add overlap column
     overlap_data = []
     for _, row in comparison.iterrows():
         n = row["Pulls"]
@@ -416,10 +390,8 @@ with tab1:
     
     comparison["CIs Overlap?"] = ["Yes" if x else "No" for x in overlap_data]
     
-    # Calculate separation threshold
     sep_n = sample_size_for_separation(rtpA, sdA, rtpB, sdB, z)
     
-    # Display key insights
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("RTP Difference", f"{abs(rtpA - rtpB):.3f}%")
@@ -434,25 +406,21 @@ with tab1:
             st.metric("Higher RTP", better)
     with col4:
         if sep_n == np.inf:
-            st.metric("Pulls to Distinguish", "N/A (same RTP)")
-        elif sep_n > 1_000_000:
-            st.metric("Pulls to Distinguish", f">{1_000_000:,}")
+            st.metric("Pulls to Distinguish", "N/A")
+        elif sep_n > 1000000:
+            st.metric("Pulls to Distinguish", f">{1000000:,}")
         else:
             st.metric("Pulls to Distinguish", f"~{sep_n:,}")
     
     st.markdown("### RTP Confidence Interval Comparison")
     
-    # Add Hold Percentage columns
     comparison_display = comparison.copy()
     comparison_display[f"Hold % ({nameA})"] = 100 - comparison_display[f"RTP % ({nameA})"]
     comparison_display[f"Hold % ({nameB})"] = 100 - comparison_display[f"RTP % ({nameB})"]
     
-    # Reorder columns for better display
     display_cols = ["Pulls"]
-    # Game A columns
     display_cols.extend([f"RTP % ({nameA})", f"Hold % ({nameA})", 
                         f"CI Low % ({nameA})", f"CI High % ({nameA})", f"CI Width % ({nameA})"])
-    # Game B columns  
     display_cols.extend([f"RTP % ({nameB})", f"Hold % ({nameB})",
                         f"CI Low % ({nameB})", f"CI High % ({nameB})", f"CI Width % ({nameB})"])
     display_cols.append("CIs Overlap?")
@@ -465,7 +433,6 @@ with tab1:
         height=400
     )
     
-    # Download button
     csv = comparison_display[display_cols].to_csv(index=False)
     st.download_button(
         label="📥 Download RTP Table as CSV",
@@ -474,7 +441,6 @@ with tab1:
         mime="text/csv"
     )
     
-    # Visualization
     st.markdown("---")
     st.subheader("📈 RTP Distribution Visualization")
     
@@ -487,34 +453,27 @@ with tab1:
             format_func=lambda x: f"{x:,}"
         )
         
-        # Overlay plot
         fig, ax = plt.subplots(figsize=(12, 6))
         plot_comparison(ax, rtpA, sdA, rtpB, sdB, viz_n, nameA, nameB, z)
         st.pyplot(fig, clear_figure=True)
         
-        # Interpretation
         ci1 = ci_for_mean(rtpA, sdA, viz_n, z)
         ci2 = ci_for_mean(rtpB, sdB, viz_n, z)
         overlap = cis_overlap(ci1, ci2)
         
         if overlap:
-            st.info(f"ℹ️ At **{viz_n:,} spins**, the {int(conf*100)}% confidence intervals **overlap**. "
-                    f"The observed RTP difference could be due to random variation.")
+            st.info(f"ℹ️ At **{viz_n:,} spins**, the {int(conf*100)}% confidence intervals **overlap**.")
         else:
-            st.success(f"✅ At **{viz_n:,} spins**, the {int(conf*100)}% confidence intervals **do not overlap**. "
-                       f"The RTP difference is likely statistically meaningful.")
+            st.success(f"✅ At **{viz_n:,} spins**, the {int(conf*100)}% confidence intervals **do not overlap**.")
 
 with tab2:
     st.header("Hit Rate Statistical Analysis")
     
-    # Calculate hit rate tables
     hrTableA = hitrate_table(nameA, hrA, pulls, z)
     hrTableB = hitrate_table(nameB, hrB, pulls, z)
     
-    # Merge and add overlap analysis
     hr_comparison = hrTableA.merge(hrTableB, on="Pulls", suffixes=(f" ({nameA})", f" ({nameB})"))
     
-    # Add overlap column
     hr_overlap_data = []
     for _, row in hr_comparison.iterrows():
         n = row["Pulls"]
@@ -524,10 +483,8 @@ with tab2:
     
     hr_comparison["CIs Overlap?"] = ["Yes" if x else "No" for x in hr_overlap_data]
     
-    # Calculate separation threshold for hit rate
     hr_sep_n = sample_size_for_hitrate_separation(hrA, hrB, z)
     
-    # Display key insights
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Hit Rate Difference", f"{abs(hrA - hrB)*100:.2f}%")
@@ -539,15 +496,14 @@ with tab2:
             st.metric("Higher Hit Rate", better_hr)
     with col3:
         if hr_sep_n == np.inf:
-            st.metric("Pulls to Distinguish", "N/A (same rate)")
-        elif hr_sep_n > 1_000_000:
-            st.metric("Pulls to Distinguish", f">{1_000_000:,}")
+            st.metric("Pulls to Distinguish", "N/A")
+        elif hr_sep_n > 1000000:
+            st.metric("Pulls to Distinguish", f">{1000000:,}")
         else:
             st.metric("Pulls to Distinguish", f"~{hr_sep_n:,}")
     
     st.markdown("### Hit Rate Confidence Interval Comparison")
     
-    # Format hit rates as percentages for display
     hr_display = hr_comparison.copy()
     for col in hr_display.columns:
         if "Hit Rate" in col or "CI Low" in col or "CI High" in col or "CI Width" in col:
@@ -563,7 +519,6 @@ with tab2:
         height=400
     )
     
-    # Download button
     csv_hr = hr_display.to_csv(index=False)
     st.download_button(
         label="📥 Download Hit Rate Table as CSV",
@@ -572,7 +527,6 @@ with tab2:
         mime="text/csv"
     )
     
-    # Visualization
     st.markdown("---")
     st.subheader("📈 Hit Rate Distribution Visualization")
     
@@ -585,63 +539,47 @@ with tab2:
             format_func=lambda x: f"{x:,}"
         )
         
-        # Overlay plot
         fig, ax = plt.subplots(figsize=(12, 6))
         plot_hitrate_comparison(ax, hrA, hrB, viz_n_hr, nameA, nameB, z)
         st.pyplot(fig, clear_figure=True)
         
-        # Interpretation
         ci1_hr = ci_for_proportion(hrA, viz_n_hr, z)
         ci2_hr = ci_for_proportion(hrB, viz_n_hr, z)
         overlap_hr = cis_overlap(ci1_hr, ci2_hr)
         
         if overlap_hr:
-            st.info(f"ℹ️ At **{viz_n_hr:,} spins**, the {int(conf*100)}% confidence intervals **overlap**. "
-                    f"The observed hit rate difference could be due to random variation.")
+            st.info(f"ℹ️ At **{viz_n_hr:,} spins**, the {int(conf*100)}% confidence intervals **overlap**.")
         else:
-            st.success(f"✅ At **{viz_n_hr:,} spins**, the {int(conf*100)}% confidence intervals **do not overlap**. "
-                       f"The hit rate difference is likely statistically meaningful.")
+            st.success(f"✅ At **{viz_n_hr:,} spins**, the {int(conf*100)}% confidence intervals **do not overlap**.")
 
-# ---------- Documentation ----------
 with st.expander("📖 Methodology & Concepts"):
     st.markdown(f"""
     ### Hit Rate
-    - **Definition**: The proportion of spins that result in any win (regardless of amount)
-    - **Typical ranges**: 
-        - Low hit rate (10-20%): High volatility games with rare big wins
-        - Medium hit rate (20-35%): Balanced gameplay
-        - High hit rate (35-50%+): Frequent small wins, lower volatility
-    - **Confidence Interval**: Uses normal approximation for proportions: p ± z × √(p(1-p)/n)
+    - **Definition**: The proportion of spins that result in any win
+    - **Typical ranges**: Low (10-20%), Medium (20-35%), High (35-50%+)
+    - **Confidence Interval**: p ± z × √(p(1-p)/n)
     
     ### Hold Percentage vs RTP
-    - **RTP (Return to Player)**: Expected percentage returned to players over time
-    - **Hold Percentage**: House edge, calculated as 100% - RTP
+    - **RTP**: Expected percentage returned to players
+    - **Hold %**: House edge = 100% - RTP
     - Example: RTP 95.08% = Hold 4.92%
     
-    ### Volatility Index vs Standard Deviation
-    - **Volatility Index (VI)**: Industry-standard measure representing typical outcome range at a given confidence level
-        - Low volatility: VI = 1-5 (classic slots, frequent small wins)
-        - Medium volatility: VI = 5-10 (balanced gameplay)
-        - High volatility: VI = 10-15+ (progressive jackpots, rare big wins)
-    - **Standard Deviation (SD)**: Raw statistical measure of variability per spin
-    - **Conversion**: VI = SD × z-score (at current confidence level: z = {z:.3f})
+    ### Volatility Index
+    - **Low**: VI = 1-5 (frequent small wins)
+    - **Medium**: VI = 5-10 (balanced)
+    - **High**: VI = 10-15+ (rare big wins)
+    - **Conversion**: VI = SD × {z:.3f} (at {int(conf*100)}% confidence)
     
     ### Statistical Method
-    - **RTP Confidence Intervals**: mean ± z × (SD / √n)
-    - **Hit Rate Confidence Intervals**: p ± z × √(p(1-p)/n)
-    - **Current confidence level**: {int(conf*100)}%
-    - **Assumptions**: 
-        - Spins are independent
-        - Large enough sample for Central Limit Theorem (typically n > 30)
-        - For hit rate: np and n(1-p) both ≥ 5
-    
-    ### Interpretation
-    - **CI Overlap**: Overlapping intervals suggest differences may be due to chance
-    - **Pulls to Distinguish**: Sample size where confidence intervals stop overlapping
-    - **Hit Rate vs RTP**: Hit rate measures frequency of wins; RTP measures average return amount
-    
-    ### Limitations
-    - Assumes known population parameters
-    - Normal approximation less accurate for very small samples or extreme proportions
-    - Doesn't account for bonus features, progressive jackpots, or complex game mechanics
+    - **RTP CI**: mean ± z × (SD / √n)
+    - **Hit Rate CI**: p ± z × √(p(1-p)/n)
+    - **Assumptions**: Independent spins, n > 30
+    """)
+
+with st.expander("💭 Example Use Cases"):
+    st.markdown("""
+    - **Casino Operators**: Verify measured RTP matches theoretical values
+    - **Regulators**: Determine appropriate testing sample sizes
+    - **Game Developers**: Design volatility profiles and understand precision
+    - **Comparison**: Evaluate statistical significance of differences
     """)
