@@ -40,13 +40,16 @@ def normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
     c = 1.0 / (sigma * math.sqrt(2.0 * math.pi))
     return c * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
 
-def ci_for_mean(rtp_pct: float, sd_pct_per_spin: float, n: int, z: float) -> Tuple[float, float]:
-    """Calculate confidence interval for mean RTP."""
-    if n <= 0 or sd_pct_per_spin < 0:
+def ci_for_mean(rtp_pct: float, volatility: float, n: int, z: float) -> Tuple[float, float]:
+    """
+    Calculate confidence interval for mean RTP.
+    Volatility already includes the z-score, so margin of error = volatility / sqrt(n)
+    """
+    if n <= 0 or volatility < 0:
         return (np.nan, np.nan)
-    se = sd_pct_per_spin / math.sqrt(n)
-    lo = rtp_pct - z * se
-    hi = rtp_pct + z * se
+    margin_of_error = volatility / math.sqrt(n)
+    lo = rtp_pct - margin_of_error
+    hi = rtp_pct + margin_of_error
     return (max(0.0, lo), min(200.0, hi))
 
 def ci_for_proportion(p: float, n: int, z: float) -> Tuple[float, float]:
@@ -64,13 +67,18 @@ def cis_overlap(ci1: Tuple[float, float], ci2: Tuple[float, float]) -> bool:
         return False
     return ci1[0] <= ci2[1] and ci2[0] <= ci1[1]
 
-def sample_size_for_separation(rtp1: float, sd1: float, rtp2: float, sd2: float, z: float) -> int:
-    """Estimate sample size needed for CIs to not overlap (conservative estimate)."""
+def sample_size_for_separation(rtp1: float, vol1: float, rtp2: float, vol2: float, z: float) -> int:
+    """
+    Estimate sample size needed for CIs to not overlap.
+    Volatility already includes z-score.
+    """
     diff = abs(rtp1 - rtp2)
     if diff < 0.001:
         return np.inf
-    combined_sd = sd1 + sd2
-    n = ((z * combined_sd) / diff) ** 2
+    # Need: (vol1 + vol2) / sqrt(n) < diff
+    # So: sqrt(n) > (vol1 + vol2) / diff
+    combined_vol = vol1 + vol2
+    n = ((combined_vol) / diff) ** 2
     return int(np.ceil(n)) if not np.isinf(n) else np.inf
 
 def sample_size_for_hitrate_separation(hr1: float, hr2: float, z: float) -> int:
@@ -82,15 +90,17 @@ def sample_size_for_hitrate_separation(hr1: float, hr2: float, z: float) -> int:
     n = ((z * combined_sd) / diff) ** 2
     return int(np.ceil(n)) if not np.isinf(n) else np.inf
 
-def ci_table(name: str, rtp_pct: float, sd_pct_per_spin: float, pulls: List[int], z: float) -> pd.DataFrame:
+def ci_table(name: str, rtp_pct: float, volatility: float, pulls: List[int], z: float) -> pd.DataFrame:
     """Generate confidence interval table for given parameters."""
     rows = []
     for n in sorted(set(int(x) for x in pulls if x and x > 0)):
-        lo, hi = ci_for_mean(rtp_pct, sd_pct_per_spin, n, z)
+        lo, hi = ci_for_mean(rtp_pct, volatility, n, z)
+        margin = volatility / math.sqrt(n)
         rows.append({
             "Game": name,
             "Pulls": n,
             "RTP %": rtp_pct,
+            "Margin of Error %": margin,
             "CI Low %": lo,
             "CI High %": hi,
             "CI Width %": hi - lo
@@ -112,29 +122,30 @@ def hitrate_table(name: str, hit_rate: float, pulls: List[int], z: float) -> pd.
         })
     return pd.DataFrame(rows)
 
-def plot_comparison(ax, rtp1: float, sd1: float, rtp2: float, sd2: float, 
+def plot_comparison(ax, rtp1: float, vol1: float, rtp2: float, vol2: float, 
                    n: int, name1: str, name2: str, z: float):
     """Plot overlaid sampling distributions for both games."""
-    if n <= 0 or sd1 <= 0 or sd2 <= 0:
+    if n <= 0 or vol1 <= 0 or vol2 <= 0:
         ax.text(0.5, 0.5, "Insufficient parameters", ha="center", va="center", 
                 transform=ax.transAxes)
         return
     
-    se1 = sd1 / math.sqrt(n)
-    se2 = sd2 / math.sqrt(n)
+    # Margin of error = volatility / sqrt(n)
+    moe1 = vol1 / math.sqrt(n)
+    moe2 = vol2 / math.sqrt(n)
     
-    min_val = min(rtp1 - SE_RANGE_MULTIPLIER * se1, rtp2 - SE_RANGE_MULTIPLIER * se2)
-    max_val = max(rtp1 + SE_RANGE_MULTIPLIER * se1, rtp2 + SE_RANGE_MULTIPLIER * se2)
+    min_val = min(rtp1 - 3*moe1, rtp2 - 3*moe2)
+    max_val = max(rtp1 + 3*moe1, rtp2 + 3*moe2)
     xs = np.linspace(min_val, max_val, PLOT_POINTS)
     
-    ys1 = normal_pdf(xs, rtp1, se1)
-    ys2 = normal_pdf(xs, rtp2, se2)
+    ys1 = normal_pdf(xs, rtp1, moe1)
+    ys2 = normal_pdf(xs, rtp2, moe2)
     
     ax.plot(xs, ys1, label=f"{name1}", color='#1f77b4', linewidth=2)
     ax.plot(xs, ys2, label=f"{name2}", color='#ff7f0e', linewidth=2)
     
-    lo1, hi1 = ci_for_mean(rtp1, sd1, n, z)
-    lo2, hi2 = ci_for_mean(rtp2, sd2, n, z)
+    lo1, hi1 = ci_for_mean(rtp1, vol1, n, z)
+    lo2, hi2 = ci_for_mean(rtp2, vol2, n, z)
     
     ax.axvline(rtp1, color='#1f77b4', linestyle=':', alpha=0.7, label=f'{name1} mean')
     ax.axvspan(lo1, hi1, alpha=0.2, color='#1f77b4')
@@ -334,7 +345,7 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 format="%.3f"
             )
             sd_pct = volatility_index_to_sd(vi, rtp_pct, conf)
-            st.caption(f"📊 Calculated SD per spin: {sd_pct:.3f}%")
+            st.caption(f"📊 Volatility = SD (same value): {sd_pct:.3f}%")
         else:
             sd_pct = st.number_input(
                 "Standard Deviation per spin (%)",
@@ -570,17 +581,17 @@ with st.expander("📖 Methodology & Concepts"):
     - Example: RTP 95.08% = Hold 4.92%
     
     ### Volatility Index
-    - **Definition**: Standard deviation of outcomes per spin (same as SD)
+    - **Definition**: Pre-calculated standard deviation that already includes the z-score for the confidence level
+    - **Margin of Error Formula**: MoE = Volatility / √n (NO z-score multiplication needed!)
+    - **Example**: Volatility = 5.73 at 10,000 pulls → MoE = 5.73 / √10,000 = 5.73 / 100 = 0.0573 = 5.73%
+    - **Confidence Interval**: RTP ± MoE (e.g., 95.08% ± 5.73% = [89.35%, 100.81%])
     - **Low**: VI = 1-5 (frequent small wins)
     - **Medium**: VI = 5-10 (balanced)
     - **High**: VI = 10-15+ (rare big wins)
-    - **Margin of Error Formula**: MoE = VI / √n
-    - **Example**: VI = 5.73 at 10,000 pulls → MoE = 5.73 / √10,000 = 5.73 / 100 = 5.73%
-    - **Note**: VI and SD are the same value, just different industry terminology
     
     ### Statistical Method
-    - **RTP CI**: mean ± z × (SD / √n)
-    - **Hit Rate CI**: p ± z × √(p(1-p)/n)
+    - **RTP CI**: RTP ± (Volatility / √n)  [Volatility already includes z-score]
+    - **Hit Rate CI**: p ± z × √(p(1-p)/n)  [Uses z-score separately]
     - **Assumptions**: Independent spins, n > 30
     """)
 
