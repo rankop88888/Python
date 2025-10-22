@@ -45,9 +45,9 @@ def cis_overlap(ci1: Tuple[float, float], ci2: Tuple[float, float]) -> bool:
 
 def sample_size_for_separation(rtp1: float, sd1: float, rtp2: float, sd2: float, z: float) -> int:
     """Estimate sample size needed for CIs to not overlap (conservative estimate)."""
-    if rtp1 == rtp2:
-        return np.inf
     diff = abs(rtp1 - rtp2)
+    if diff < 0.001:  # Effectively equal (within 0.001%)
+        return np.inf
     # Conservative: need z * (se1 + se2) < diff
     # se = sd/sqrt(n), so z * (sd1 + sd2)/sqrt(n) < diff
     # sqrt(n) > z * (sd1 + sd2) / diff
@@ -118,10 +118,10 @@ with st.sidebar:
     
     conf = st.selectbox(
         "Confidence Level",
-        [0.80, 0.90, 0.95, 0.975, 0.99],
-        index=2,
-        format_func=lambda x: f"{x:.1%}" if x != 0.975 else "97.5%",
-        help="Higher confidence levels produce wider intervals"
+        [0.95, 0.99],
+        index=0,
+        format_func=lambda x: f"{x:.0%}",
+        help="Higher confidence levels produce wider intervals. 95% and 99% are industry standards for slot testing."
     )
     z = CONF_TO_Z[conf]
 
@@ -228,7 +228,7 @@ with col2:
     st.metric("Higher RTP", better)
 with col3:
     if sep_n == np.inf:
-        st.metric("Spins to Distinguish", "∞ (identical RTP)")
+        st.metric("Spins to Distinguish", "N/A (same RTP)")
     elif sep_n > 1_000_000:
         st.metric("Spins to Distinguish", f">{1_000_000:,}")
     else:
