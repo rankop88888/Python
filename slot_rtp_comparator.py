@@ -74,8 +74,6 @@ def sample_size_for_hitrate_separation(hr1: float, hr2: float, z: float) -> int:
     diff = abs(hr1 - hr2)
     if diff < 0.0001:
         return np.inf
-    # Conservative estimate: need z * (se1 + se2) < diff
-    # se = sqrt(p*(1-p)/n), so we need to solve for n
     combined_sd = math.sqrt(hr1 * (1 - hr1)) + math.sqrt(hr2 * (1 - hr2))
     n = ((z * combined_sd) / diff) ** 2
     return int(np.ceil(n)) if not np.isinf(n) else np.inf
@@ -188,9 +186,11 @@ def plot_hitrate_comparison(ax, hr1: float, hr2: float, n: int, name1: str, name
 st.title("🎰 Slot Machine RTP Comparator")
 st.markdown("Compare the statistical reliability of RTP and hit rate measurements across different slot machines.")
 
-# Initialize session state for pulls
+# Initialize session state
 if 'pulls' not in st.session_state:
     st.session_state.pulls = [10000, 100000, 1000000, 10000000]
+if 'run_analysis' not in st.session_state:
+    st.session_state.run_analysis = False
 
 with st.sidebar:
     st.header("⚙️ Configuration")
@@ -206,31 +206,59 @@ with st.sidebar:
 
     st.markdown("**Number of Hand Pulls**")
     
-    # Display current pulls
-    pulls_display = st.multiselect(
-        "Selected sample sizes", 
-        sorted(st.session_state.pulls),
-        sorted(st.session_state.pulls),
-        help="Number of spins to analyze",
-        key="pulls_multiselect"
-    )
-    st.session_state.pulls = pulls_display
+    # Preset options
+    preset_options = {
+        "Small Scale (10K - 100K)": [10000, 50000, 100000],
+        "Medium Scale (100K - 1M)": [100000, 500000, 1000000],
+        "Large Scale (1M - 10M)": [1000000, 5000000, 10000000],
+        "Full Range": [10000, 100000, 1000000, 10000000, 100000000],
+        "Custom": []
+    }
     
-    # Add new pull count
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        new_pull = st.number_input("Add custom size", min_value=1, step=1, value=50000, key="new_pull_input")
-    with col2:
-        st.write("")
-        if st.button("Add", use_container_width=True):
-            if new_pull not in st.session_state.pulls:
-                st.session_state.pulls = sorted(st.session_state.pulls + [int(new_pull)])
+    preset = st.selectbox(
+        "Choose preset",
+        list(preset_options.keys()),
+        index=3,
+        help="Select a preset range or choose Custom"
+    )
+    
+    if preset == "Custom":
+        # Multi-select for custom
+        available_sizes = [10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 
+                          500000, 1000000, 5000000, 10000000, 50000000, 100000000]
+        pulls = st.multiselect(
+            "Select sample sizes",
+            available_sizes,
+            default=[10000, 100000, 1000000, 10000000],
+            help="Choose multiple sample sizes",
+            format_func=lambda x: f"{x:,}"
+        )
+    else:
+        pulls = preset_options[preset]
+        st.info(f"📊 Selected sizes: {', '.join([f'{p:,}' for p in pulls])}")
+    
+    # Option to add individual custom size
+    with st.expander("➕ Add Individual Size"):
+        custom_pull = st.number_input(
+            "Custom pull count", 
+            min_value=10, 
+            step=1000, 
+            value=50000,
+            format="%d"
+        )
+        if st.button("Add to Analysis", use_container_width=True):
+            if custom_pull not in pulls:
+                pulls = sorted(pulls + [int(custom_pull)])
+                st.success(f"Added {custom_pull:,} pulls")
                 st.rerun()
 
     st.divider()
-    st.caption("💡 **RTP** = Return to Player (%). **Hit Rate** = Probability of winning spin. **VI** = Volatility Index.")
+    st.caption("💡 **RTP** = Return to Player (%). **Hold %** = House edge. **VI** = Volatility Index.")
 
-pulls = st.session_state.pulls
+# Validate pulls
+if not pulls or len(pulls) == 0:
+    st.error("❌ Please select at least one sample size")
+    st.stop()
 
 # Game input columns
 colA, colB = st.columns(2, gap="large")
@@ -261,12 +289,13 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 min_value=0.0, 
                 max_value=200.0, 
                 value=default_rtp, 
-                step=0.1,
+                step=0.01,
                 key=f"rtp_{game_id}",
-                help="Expected return to player per spin"
+                help="Expected return to player per spin",
+                format="%.2f"
             )
             hold_pct = 100.0 - rtp_pct
-            st.caption(f"📊 Hold Percentage: {hold_pct:.2f}%")
+            st.caption(f"📊 Hold Percentage: {hold_pct:.3f}%")
         else:
             hold_pct = st.number_input(
                 "Hold Percentage (%)",
@@ -275,10 +304,11 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 value=100.0 - default_rtp,
                 step=0.01,
                 key=f"hold_{game_id}",
-                help="House edge (100% - RTP)"
+                help="House edge (100% - RTP)",
+                format="%.3f"
             )
             rtp_pct = 100.0 - hold_pct
-            st.caption(f"📊 RTP: {rtp_pct:.2f}%")
+            st.caption(f"📊 RTP: {rtp_pct:.3f}%")
         
         hit_rate = st.number_input(
             "Hit Rate (%)",
@@ -288,14 +318,14 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
             step=0.1,
             key=f"hr_{game_id}",
             help="Percentage of spins that result in a win"
-        ) / 100.0  # Convert to proportion
+        ) / 100.0
         
         st.markdown("**Volatility Input Method**")
         use_vi = st.radio(
             "Choose input type",
             ["Volatility Index", "Standard Deviation"],
             key=f"vol_type_{game_id}",
-            help="Volatility Index is industry standard (typically 1-15). SD is raw statistical measure."
+            help="Volatility Index is industry standard (typically 1-15)"
         )
         
         if use_vi == "Volatility Index":
@@ -304,24 +334,25 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 min_value=0.1, 
                 max_value=50.0, 
                 value=default_vi, 
-                step=0.1,
+                step=0.001,
                 key=f"vi_{game_id}",
-                help="Typical range: Low (1-5), Medium (5-10), High (10-15)"
+                help="Typical range: Low (1-5), Medium (5-10), High (10-15)",
+                format="%.3f"
             )
             sd_pct = volatility_index_to_sd(vi, rtp_pct, conf)
-            st.caption(f"📊 Calculated SD per spin: {sd_pct:.2f}%")
+            st.caption(f"📊 Calculated SD per spin: {sd_pct:.3f}%")
         else:
             sd_pct = st.number_input(
                 "Standard Deviation per spin (%)",
                 min_value=0.1, 
                 max_value=500.0, 
                 value=volatility_index_to_sd(default_vi, default_rtp, conf), 
-                step=1.0,
+                step=0.1,
                 key=f"sd_{game_id}",
                 help="Raw statistical standard deviation per spin"
             )
             vi = sd_to_volatility_index(sd_pct, conf)
-            st.caption(f"📊 Calculated Volatility Index: {vi:.2f}")
+            st.caption(f"📊 Calculated Volatility Index: {vi:.3f}")
         
         if vi > 15:
             st.warning("⚠️ Very high volatility - unusual for most slot machines")
@@ -340,8 +371,16 @@ if sdA <= 0 or sdB <= 0:
     st.error("❌ Volatility/SD must be greater than 0")
     st.stop()
 
-if len(pulls) == 0:
-    st.error("❌ Please select at least one sample size")
+# Run Analysis Button
+st.markdown("---")
+run_col1, run_col2, run_col3 = st.columns([1, 1, 1])
+with run_col2:
+    if st.button("🚀 Run Analysis", type="primary", use_container_width=True):
+        st.session_state.run_analysis = True
+
+# Only show results if analysis has been run
+if not st.session_state.run_analysis:
+    st.info("👆 Configure your games above and click **Run Analysis** to see results")
     st.stop()
 
 # ---------- Analysis ----------
@@ -420,7 +459,7 @@ with tab1:
     )
     
     # Download button
-    csv = comparison.to_csv(index=False)
+    csv = comparison_display[display_cols].to_csv(index=False)
     st.download_button(
         label="📥 Download RTP Table as CSV",
         data=csv,
@@ -437,7 +476,8 @@ with tab1:
             "Select sample size to visualize RTP distributions",
             options=sorted(set(comparison["Pulls"])),
             value=int(sorted(set(comparison["Pulls"]))[min(2, len(set(comparison['Pulls']))-1)]),
-            key="rtp_viz"
+            key="rtp_viz",
+            format_func=lambda x: f"{x:,}"
         )
         
         # Overlay plot
@@ -517,7 +557,7 @@ with tab2:
     )
     
     # Download button
-    csv_hr = hr_comparison.to_csv(index=False)
+    csv_hr = hr_display.to_csv(index=False)
     st.download_button(
         label="📥 Download Hit Rate Table as CSV",
         data=csv_hr,
@@ -534,7 +574,8 @@ with tab2:
             "Select sample size to visualize hit rate distributions",
             options=sorted(set(hr_comparison["Pulls"])),
             value=int(sorted(set(hr_comparison["Pulls"]))[min(2, len(set(hr_comparison['Pulls']))-1)]),
-            key="hr_viz"
+            key="hr_viz",
+            format_func=lambda x: f"{x:,}"
         )
         
         # Overlay plot
@@ -565,39 +606,7 @@ with st.expander("📖 Methodology & Concepts"):
         - High hit rate (35-50%+): Frequent small wins, lower volatility
     - **Confidence Interval**: Uses normal approximation for proportions: p ± z × √(p(1-p)/n)
     
-    ### Volatility Index vs Standard Deviation
-    - **Volatility Index (VI)**: Industry-standard measure representing typical outcome range at a given confidence level
-        - Low volatility: VI = 1-5 (classic slots, frequent small wins)
-        - Medium volatility: VI = 5-10 (balanced gameplay)
-        - High volatility: VI = 10-15+ (progressive jackpots, rare big wins)
-    - **Standard Deviation (SD)**: Raw statistical measure of variability per spin
-    - **Conversion**: VI = SD × z-score (at current confidence level: z = {z:.3f})
-    
-    ### Statistical Method
-    - **RTP Confidence Intervals**: mean ± z × (SD / √n)
-    - **Hit Rate Confidence Intervals**: p ± z × √(p(1-p)/n)
-    - **Current confidence level**: {int(conf*100)}%
-    - **Assumptions**: 
-        - Spins are independent
-        - Large enough sample for Central Limit Theorem (typically n > 30)
-        - For hit rate: np and n(1-p) both ≥ 5
-    
-    ### Interpretation
-    - **CI Overlap**: Overlapping intervals suggest differences may be due to chance
-    - **Pulls to Distinguish**: Sample size where confidence intervals stop overlapping
-    - **Hit Rate vs RTP**: Hit rate measures frequency of wins; RTP measures average return amount
-    
-    ### Limitations
-    - Assumes known population parameters
-    - Normal approximation less accurate for very small samples or extreme proportions
-    - Doesn't account for bonus features, progressive jackpots, or complex game mechanics
-    """)
-
-with st.expander("💭 Example Use Cases"):
-    st.markdown("""
-    - **Casino Operators**: Verify measured RTP and hit rate match theoretical values
-    - **Players**: Understand sample sizes needed to assess machine performance and volatility
-    - **Regulators**: Determine appropriate testing sample sizes for compliance
-    - **Game Developers**: Design volatility profiles and hit rate targets; understand measurement precision
-    - **Game Comparison**: Evaluate whether differences in hit rate or RTP between machines are statistically meaningful
-    """)
+    ### Hold Percentage vs RTP
+    - **RTP (Return to Player)**: Expected percentage returned to players over time
+    - **Hold Percentage**: House edge, calculated as 100% - RTP
+    - Example
