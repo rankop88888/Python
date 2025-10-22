@@ -19,14 +19,19 @@ SE_RANGE_MULTIPLIER = 5
 
 # ---------- Helper Functions ----------
 def volatility_index_to_sd(vi: float, rtp: float, conf_level: float) -> float:
-    """Convert Volatility Index to Standard Deviation per spin."""
-    z = CONF_TO_Z[conf_level]
-    return vi / z
+    """
+    Convert Volatility Index to Standard Deviation per spin.
+    Volatility Index represents the standard deviation directly.
+    Margin of Error = VI / sqrt(n)
+    """
+    return vi
 
 def sd_to_volatility_index(sd: float, conf_level: float) -> float:
-    """Convert Standard Deviation per spin to Volatility Index."""
-    z = CONF_TO_Z[conf_level]
-    return sd * z
+    """
+    Convert Standard Deviation per spin to Volatility Index.
+    They are the same value - just different naming conventions.
+    """
+    return sd
 
 def normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
     """Calculate normal probability density function."""
@@ -352,8 +357,8 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
             
     return name, rtp_pct, sd_pct, hit_rate
 
-nameA, rtpA, sdA, hrA = game_input_block(colA, "A", "Game A", 95.08, 5.795, 25.0)
-nameB, rtpB, sdB, hrB = game_input_block(colB, "B", "Game B", 95.08, 5.795, 25.0)
+nameA, rtpA, sdA, hrA = game_input_block(colA, "A", "Game A", 95.08, 5.73, 25.0)
+nameB, rtpB, sdB, hrB = game_input_block(colB, "B", "Game B", 95.08, 5.73, 25.0)
 
 if sdA <= 0 or sdB <= 0:
     st.error("❌ Volatility/SD must be greater than 0")
@@ -565,10 +570,13 @@ with st.expander("📖 Methodology & Concepts"):
     - Example: RTP 95.08% = Hold 4.92%
     
     ### Volatility Index
+    - **Definition**: Standard deviation of outcomes per spin (same as SD)
     - **Low**: VI = 1-5 (frequent small wins)
     - **Medium**: VI = 5-10 (balanced)
     - **High**: VI = 10-15+ (rare big wins)
-    - **Conversion**: VI = SD × {z:.3f} (at {int(conf*100)}% confidence)
+    - **Margin of Error Formula**: MoE = VI / √n
+    - **Example**: VI = 5.73 at 10,000 pulls → MoE = 5.73 / √10,000 = 5.73 / 100 = 5.73%
+    - **Note**: VI and SD are the same value, just different industry terminology
     
     ### Statistical Method
     - **RTP CI**: mean ± z × (SD / √n)
