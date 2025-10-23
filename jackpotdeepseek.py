@@ -64,7 +64,7 @@ for level in range(1, num_levels + 1):
     with col2:
         st.markdown("**Start Settings**")
         start_value = st.number_input(f"L{level} Start Value (€)", value=100 * level, key=f"start_{level}", min_value=0,
-                                     help="Initial jackpot amount")
+                                     help="Initial jackpot amount (seed money)")
         
         if jackpot_type == "Standard Multi-Level Progressive":
             trigger_value = st.number_input(f"L{level} Trigger Value (€)", 
@@ -79,11 +79,11 @@ for level in range(1, num_levels + 1):
         st.markdown("**Contribution**")
         increment_percent = st.number_input(f"L{level} Increment %", value=1.0 * level, step=0.1, format="%.2f", 
                                           key=f"inc_{level}", min_value=0.0,
-                                          help="% of coin-in that goes to this level")
+                                          help="% of coin-in that accumulates")
         increment_ratio = increment_percent / 100
         
         if jackpot_type == "Mystery Progressive":
-            st.metric("Daily Increment", f"€{increment_ratio * total_coin_in:,.2f}")
+            st.metric("Daily Accumulation", f"€{increment_ratio * total_coin_in:,.2f}")
 
     # --- Validations ---
     if min_value >= max_value:
@@ -129,10 +129,10 @@ if not error_flag and total_coin_in > 0:
         # Mystery Progressive Calculations
         df["Hit Range Size (€)"] = df["Max Value"] - df["Start Value"]
         df["Avg Hit Value (€)"] = (df["Start Value"] + df["Max Value"]) / 2
-        df["JP Increment per Day (€)"] = df["Increment Ratio"] * total_coin_in
+        df["Accumulation per Day (€)"] = df["Increment Ratio"] * total_coin_in
         
         # Calculate time to reach max
-        df["Days to Must Hit"] = df["Hit Range Size (€)"] / df["JP Increment per Day (€)"]
+        df["Days to Must Hit"] = df["Hit Range Size (€)"] / df["Accumulation per Day (€)"]
         df["Days to Must Hit"] = df["Days to Must Hit"].replace([float('inf'), float('-inf')], 0)
         
         # Estimate hit frequency (conservative: assume hits near max)
@@ -141,9 +141,14 @@ if not error_flag and total_coin_in > 0:
         df["Hits per Month"] = df["Hits per Month"].replace([float('inf'), float('-inf')], 0)
         df["Hits per Day"] = df["Hits per Month"] / 30
         
-        df["Estimated JP Paid / Day (€)"] = df["Hits per Day"] * df["Avg Hit Value (€)"]
-        df["Estimated JP Paid / Month (€)"] = df["Hits per Month"] * df["Avg Hit Value (€)"]
-        df["Real RTP (%)"] = (df["Estimated JP Paid / Day (€)"] / total_coin_in) * 100
+        # CORRECTED: Real increment excludes start value (seed money)
+        df["Real Increment per Hit (€)"] = df["Avg Hit Value (€)"] - df["Start Value"]
+        df["Real Increment per Day (€)"] = df["Hits per Day"] * df["Real Increment per Hit (€)"]
+        df["Total Cost per Day (€)"] = df["Hits per Day"] * df["Avg Hit Value (€)"]
+        df["Total Cost per Month (€)"] = df["Total Cost per Day (€)"] * 30
+        
+        # Real RTP based on actual increment from coin-in
+        df["Real RTP (%)"] = (df["Real Increment per Day (€)"] / total_coin_in) * 100
         
     else:
         # Standard Progressive Calculations
@@ -153,10 +158,16 @@ if not error_flag and total_coin_in > 0:
         df["Hits per Month"] = df["Hits per Day"] * 30
         df["Avg Days per Hit"] = 1 / df["Hits per Day"]
         df["Avg Days per Hit"] = df["Avg Days per Hit"].replace([float('inf'), float('-inf')], 0)
-        df["Real RTP (%)"] = ((df["Avg Hit Value (€)"] * df["Hits per Day"]) / total_coin_in) * 100
-        df["JP Increment per Day (€)"] = df["Increment Ratio"] * total_coin_in
-        df["Estimated JP Paid / Day (€)"] = df["Hits per Day"] * df["Avg Hit Value (€)"]
-        df["Estimated JP Paid / Month (€)"] = df["Estimated JP Paid / Day (€)"] * 30
+        
+        # CORRECTED: Real increment excludes start value (seed money)
+        df["Real Increment per Hit (€)"] = df["Avg Hit Value (€)"] - df["Start Value"]
+        df["Real Increment per Day (€)"] = df["Hits per Day"] * df["Real Increment per Hit (€)"]
+        df["Accumulation per Day (€)"] = df["Increment Ratio"] * total_coin_in
+        df["Total Cost per Day (€)"] = df["Hits per Day"] * df["Avg Hit Value (€)"]
+        df["Total Cost per Month (€)"] = df["Total Cost per Day (€)"] * 30
+        
+        # Real RTP based on actual increment from coin-in
+        df["Real RTP (%)"] = (df["Real Increment per Day (€)"] / total_coin_in) * 100
 
     # -------------------------------
     # Section 6: Display Results
@@ -164,36 +175,52 @@ if not error_flag and total_coin_in > 0:
     
     st.subheader("📊 Summary Metrics")
     
-    total_increment = df["JP Increment per Day (€)"].sum()
+    total_accumulation = df["Accumulation per Day (€)"].sum()
+    total_real_increment = df["Real Increment per Day (€)"].sum()
     total_rtp = df["Real RTP (%)"].sum()
-    total_paid_day = df["Estimated JP Paid / Day (€)"].sum()
-    total_paid_month = df["Estimated JP Paid / Month (€)"].sum()
+    total_cost_day = df["Total Cost per Day (€)"].sum()
+    total_cost_month = df["Total Cost per Month (€)"].sum()
     
     metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
     
     with metric_col1:
-        st.metric("Total Increment/Day", f"€{total_increment:,.2f}")
+        st.metric("Accumulation/Day", f"€{total_accumulation:,.2f}", 
+                 help="Amount accumulated from coin-in per day")
     
     with metric_col2:
-        st.metric("Total RTP %", f"{total_rtp:.2f}%")
+        st.metric("Real Increment/Day", f"€{total_real_increment:,.2f}",
+                 help="Actual increment paid (excluding start values)")
     
     with metric_col3:
-        st.metric("Est. Paid/Day", f"€{total_paid_day:,.2f}")
+        st.metric("Real RTP %", f"{total_rtp:.2f}%",
+                 help="RTP from jackpot increments only")
     
     with metric_col4:
-        st.metric("Est. Paid/Month", f"€{total_paid_month:,.2f}")
+        st.metric("Total Cost/Day", f"€{total_cost_day:,.2f}",
+                 help="Total jackpot payouts including start values")
+    
+    # Cost breakdown
+    st.info(f"""
+    💡 **Cost Breakdown**:
+    - **Total Cost/Day**: €{total_cost_day:,.2f} (includes seed money + increments)
+    - **Real Increment/Day**: €{total_real_increment:,.2f} (from coin-in only)
+    - **Seed Money/Day**: €{total_cost_day - total_real_increment:,.2f} (start value costs)
+    - **Total Cost/Month**: €{total_cost_month:,.2f}
+    """)
     
     # Display detailed table
     st.subheader("📈 Detailed Analysis by Level")
     
     if jackpot_type == "Mystery Progressive":
         display_cols = ["Level", "Start Value", "Max Value", "Avg Hit Value (€)", 
-                       "Increment %", "JP Increment per Day (€)", "Days to Must Hit",
-                       "Hits per Month", "Estimated JP Paid / Month (€)", "Real RTP (%)"]
+                       "Increment %", "Accumulation per Day (€)", "Days to Must Hit",
+                       "Hits per Month", "Real Increment per Hit (€)", "Real Increment per Day (€)",
+                       "Total Cost per Month (€)", "Real RTP (%)"]
     else:
         display_cols = ["Level", "Start Value", "Max Value", "Trigger Value", "Avg Hit Value (€)",
-                       "Increment %", "JP Increment per Day (€)", "Hits per Day", "Avg Days per Hit",
-                       "Estimated JP Paid / Month (€)", "Real RTP (%)"]
+                       "Increment %", "Accumulation per Day (€)", "Hits per Day", "Avg Days per Hit",
+                       "Real Increment per Hit (€)", "Real Increment per Day (€)",
+                       "Total Cost per Month (€)", "Real RTP (%)"]
     
     display_df = df[display_cols].copy()
     
@@ -214,24 +241,30 @@ if not error_flag and total_coin_in > 0:
     
     for idx, row in df.iterrows():
         level = int(row["Level"])
+        seed_cost_per_hit = row['Start Value']
+        real_inc_per_hit = row['Real Increment per Hit (€)']
         
         if jackpot_type == "Mystery Progressive":
             st.info(f"""
             **Level {level} ({jackpot_type})**:
             - 🎲 Hits randomly between €{row['Start Value']:,.2f} and €{row['Max Value']:,.2f}
             - ⏰ Takes {row['Days to Must Hit']:.1f} days to reach Must Hit By
-            - 📊 Contributes {row['Real RTP (%)']:.2f}% to RTP
+            - 📊 Contributes {row['Real RTP (%)']:.2f}% to RTP (real increment only)
             - 💰 Expected {row['Hits per Month']:.1f} hits/month averaging €{row['Avg Hit Value (€)']:,.2f}
-            - 📈 Grows by €{row['JP Increment per Day (€)']:,.2f}/day ({row['Increment %']:.2f}% of coin-in)
+            - 📈 Accumulates €{row['Accumulation per Day (€)']:,.2f}/day ({row['Increment %']:.2f}% of coin-in)
+            - 💵 Real increment per hit: €{real_inc_per_hit:,.2f} (excludes €{seed_cost_per_hit:,.2f} seed)
+            - 🎯 Total cost per month: €{row['Total Cost per Month (€)']:,.2f}
             """)
         else:
             st.info(f"""
             **Level {level} ({jackpot_type})**:
             - 🎯 Hits at trigger value €{row['Trigger Value']:,.2f}
             - ⏰ Average {row['Avg Days per Hit']:.1f} days between hits
-            - 📊 Contributes {row['Real RTP (%)']:.2f}% to RTP
+            - 📊 Contributes {row['Real RTP (%)']:.2f}% to RTP (real increment only)
             - 💰 Expected {row['Hits per Month']:.1f} hits/month averaging €{row['Avg Hit Value (€)']:,.2f}
-            - 📈 Grows by €{row['JP Increment per Day (€)']:,.2f}/day ({row['Increment %']:.2f}% of coin-in)
+            - 📈 Accumulates €{row['Accumulation per Day (€)']:,.2f}/day ({row['Increment %']:.2f}% of coin-in)
+            - 💵 Real increment per hit: €{real_inc_per_hit:,.2f} (excludes €{seed_cost_per_hit:,.2f} seed)
+            - 🎯 Total cost per month: €{row['Total Cost per Month (€)']:,.2f}
             """)
 
 # -------------------------------
