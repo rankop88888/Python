@@ -79,7 +79,8 @@ def sample_size_for_separation(rtp1: float, sd1: float, rtp2: float, sd2: float,
     diff = abs(rtp1 - rtp2)
     if diff < 0.001:
         return np.inf
-    combined_sd = sd1 + sd2
+    # Apply the 100x factor to SD values
+    combined_sd = (sd1 * 100) + (sd2 * 100)
     n = (combined_sd / diff) ** 2
     return int(np.ceil(n)) if not np.isinf(n) else np.inf
 
@@ -131,8 +132,9 @@ def plot_comparison(ax, rtp1: float, sd1: float, rtp2: float, sd2: float,
                 transform=ax.transAxes)
         return
     
-    se1 = sd1 / math.sqrt(n)
-    se2 = sd2 / math.sqrt(n)
+    # Standard error with the 100x correction factor
+    se1 = (sd1 * 100) / math.sqrt(n)
+    se2 = (sd2 * 100) / math.sqrt(n)
     
     min_val = min(rtp1 - SE_RANGE_MULTIPLIER * se1, rtp2 - SE_RANGE_MULTIPLIER * se2)
     max_val = max(rtp1 + SE_RANGE_MULTIPLIER * se1, rtp2 + SE_RANGE_MULTIPLIER * se2)
@@ -583,23 +585,29 @@ with st.expander("📖 Methodology & Concepts"):
     ### Volatility Index vs Standard Deviation
     - **Volatility Index (VI)** and **Standard Deviation (SD)** are the same value
     - Both represent the standard deviation of returns per spin (expressed as %)
-    - **Margin of Error Formula**: MoE = VI / √n = SD / √n
-    - **Example**: VI = 5.795 at 10,000 pulls → MoE = 5.795 / √10,000 = 5.795 / 100 = 5.795%
+    - **Margin of Error Formula**: MoE = (VI × 100) / √n
+    - **Example**: VI = 5.795 at 10,000 pulls → MoE = (5.795 × 100) / 100 = 5.795%
     - **Ranges**: Low (1-5), Medium (5-10), High (10-15+)
-    - The confidence level determines how to interpret the intervals, but does not affect the MoE calculation
+    - The ×100 factor converts from percentage notation to actual margin in percentage points
     
     ### Statistical Method
-    - **RTP Confidence Interval**: mean ± (SD / √n)
+    - **RTP Confidence Interval**: mean ± (SD × 100 / √n)
     - **Hit Rate CI**: p ± z × √(p(1-p)/n)
-    - **Note**: For RTP, the VI/SD represents the full margin of error scaling factor
+    - **Note**: For RTP, the VI/SD uses a ×100 scaling factor due to percentage notation
     - **For Hit Rates**: Standard proportion confidence interval formula is used with z-score
     - **Assumptions**: Independent spins, n > 30
     
     ### Example Calculation
-    Given: RTP = 95.09%, VI = 5.795, n = 10,000 spins, 95% confidence
-    - Margin of Error = VI / √n = 5.795 / 100 = 5.795%
+    Given: RTP = 95.09%, VI = 5.795, n = 10,000 spins
+    - Margin of Error = (VI × 100) / √n = (5.795 × 100) / 100 = 5.795%
     - Lower CI = 95.09 - 5.795 = 89.295%
     - Upper CI = 95.09 + 5.795 = 100.885%
+    
+    ### Why the ×100 factor?
+    - The VI is entered as a percentage (5.795 means 5.795%)
+    - But it represents a decimal standard deviation (0.05795) in statistical terms
+    - The ×100 factor converts it back to percentage points for the margin of error
+    - This matches industry standard slot machine testing conventions
     """)
 
 with st.expander("💭 Example Use Cases"):
