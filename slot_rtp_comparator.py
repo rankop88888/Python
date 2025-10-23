@@ -11,7 +11,7 @@ st.set_page_config(page_title="Slot RTP Comparator", layout="wide")
 # ---------- Constants ----------
 CONF_TO_Z = {
     0.95: 1.959963984540054,
-    0.997: 2.5758293035489004,
+    0.99: 2.5758293035489004,
 }
 
 PLOT_POINTS = 600
