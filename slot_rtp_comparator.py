@@ -21,19 +21,16 @@ SE_RANGE_MULTIPLIER = 5
 def volatility_index_to_sd(vi: float, rtp: float, conf_level: float) -> float:
     """
     Convert Volatility Index to Standard Deviation per spin.
-    Volatility Index already includes z-score for the confidence level.
-    VI = z × SD, so SD = VI / z
+    VI and SD are the same - both represent standard deviation per spin.
     """
-    z = CONF_TO_Z[conf_level]
-    return vi / z
+    return vi
 
 def sd_to_volatility_index(sd: float, conf_level: float) -> float:
     """
     Convert Standard Deviation per spin to Volatility Index.
-    VI = z × SD
+    VI and SD are the same - both represent standard deviation per spin.
     """
-    z = CONF_TO_Z[conf_level]
-    return z * sd
+    return sd
 
 def normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
     """Calculate normal probability density function."""
@@ -45,12 +42,13 @@ def normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
 def ci_for_mean(rtp_pct: float, sd: float, n: int, z: float) -> Tuple[float, float]:
     """
     Calculate confidence interval for mean RTP.
-    sd parameter is the raw standard deviation (not VI).
-    Margin of error = z × (sd / sqrt(n))
+    In slot industry, the VI/SD already represents the margin of error scaling.
+    Margin of error = sd / sqrt(n)
+    Note: z parameter kept for API compatibility but not used in calculation.
     """
     if n <= 0 or sd < 0:
         return (np.nan, np.nan)
-    margin_of_error = z * sd / math.sqrt(n)
+    margin_of_error = sd / math.sqrt(n)
     lo = rtp_pct - margin_of_error
     hi = rtp_pct + margin_of_error
     return (max(0.0, lo), min(200.0, hi))
@@ -75,8 +73,8 @@ def sample_size_for_separation(rtp1: float, sd1: float, rtp2: float, sd2: float,
     diff = abs(rtp1 - rtp2)
     if diff < 0.001:
         return np.inf
-    combined_sd = math.sqrt(sd1**2 + sd2**2)
-    n = ((z * combined_sd) / diff) ** 2
+    combined_sd = sd1 + sd2
+    n = (combined_sd / diff) ** 2
     return int(np.ceil(n)) if not np.isinf(n) else np.inf
 
 def sample_size_for_hitrate_separation(hr1: float, hr2: float, z: float) -> int:
@@ -340,7 +338,7 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 format="%.3f"
             )
             sd_pct = volatility_index_to_sd(vi, rtp_pct, conf)
-            st.caption(f"📊 Calculated SD per spin: {sd_pct:.3f}% (VI = {z:.3f} × SD)")
+            st.caption(f"📊 SD per spin: {sd_pct:.3f}% (VI and SD are equivalent)")
         else:
             sd_pct = st.number_input(
                 "Standard Deviation per spin (%)",
@@ -349,10 +347,10 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 value=volatility_index_to_sd(default_vi, default_rtp, conf), 
                 step=0.1,
                 key=f"sd_{game_id}",
-                help="Raw statistical standard deviation per spin (without z-score)"
+                help="Standard deviation per spin (same as Volatility Index)"
             )
             vi = sd_to_volatility_index(sd_pct, conf)
-            st.caption(f"📊 Calculated Volatility Index: {vi:.3f} (VI = {z:.3f} × SD)")
+            st.caption(f"📊 Volatility Index: {vi:.3f} (VI and SD are equivalent)")
         
         if vi > 15:
             st.warning("⚠️ Very high volatility")
