@@ -91,7 +91,8 @@ def sample_size_for_hitrate_separation(hr1: float, hr2: float, z: float) -> int:
     return int(np.ceil(n)) if not np.isinf(n) else np.inf
 
 def ci_table(name: str, rtp_pct: float, sd_pct_per_spin: float, pulls: List[int], z: float) -> pd.DataFrame:
-    """Generate confidence interval table for given parameters."""
+    """Generate confidence interval table for given parameters.
+    sd_pct_per_spin should be in percentage form (e.g., 5.73 not 0.0573)"""
     rows = []
     for n in sorted(set(int(x) for x in pulls if x and x > 0)):
         lo, hi = ci_for_mean(rtp_pct, sd_pct_per_spin, n, z)
@@ -367,6 +368,10 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
 
 nameA, rtpA, sdA, hrA = game_input_block(colA, "A", "Game A", 95.08, 5.73, 25.0)
 nameB, rtpB, sdB, hrB = game_input_block(colB, "B", "Game B", 95.08, 5.73, 25.0)
+
+# Debug output
+st.write(f"Debug - Game A: RTP={rtpA}%, SD={sdA}%")
+st.write(f"Debug - Game B: RTP={rtpB}%, SD={sdB}%")
 
 if sdA <= 0 or sdB <= 0:
     st.error("❌ Volatility/SD must be greater than 0")
