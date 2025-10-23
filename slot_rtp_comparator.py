@@ -42,15 +42,19 @@ def normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
 def ci_for_mean(rtp_pct: float, sd: float, n: int, z: float) -> Tuple[float, float]:
     """
     Calculate confidence interval for mean RTP.
-    In slot industry, the VI/SD already represents the margin of error scaling.
-    Margin of error = sd / sqrt(n)
-    Note: z parameter kept for API compatibility but not used in calculation.
+    For slot machines: Margin of error = sd / sqrt(n)
+    The sd parameter is the Volatility Index or Standard Deviation (they are the same).
+    Note: z parameter kept for compatibility but not used in slot RTP calculations.
     """
     if n <= 0 or sd < 0:
         return (np.nan, np.nan)
+    
+    # Calculate margin of error: MoE = VI / √n
     margin_of_error = sd / math.sqrt(n)
+    
     lo = rtp_pct - margin_of_error
     hi = rtp_pct + margin_of_error
+    
     return (max(0.0, lo), min(200.0, hi))
 
 def ci_for_proportion(p: float, n: int, z: float) -> Tuple[float, float]:
@@ -323,7 +327,7 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
             "Choose input type",
             ["Volatility Index", "Standard Deviation"],
             key=f"vol_type_{game_id}",
-            help="Volatility Index already includes z-score; SD is raw statistical measure"
+            help="VI and SD are equivalent - both represent standard deviation per spin"
         )
         
         if use_vi == "Volatility Index":
@@ -574,28 +578,23 @@ with st.expander("📖 Methodology & Concepts"):
     - Example: RTP 95.08% = Hold 4.92%
     
     ### Volatility Index vs Standard Deviation
-    - **Volatility Index (VI)**: Industry standard that includes the z-score
-      - VI = z × SD (e.g., for 95% confidence: VI = 1.96 × SD)
-      - **Margin of Error Formula**: MoE = VI / √n
-      - **Example**: VI = 5.73 at 10,000 pulls → MoE = 5.73 / √10,000 = 5.73 / 100 = 5.73%
-      - **Ranges**: Low (1-5), Medium (5-10), High (10-15+)
-    - **Standard Deviation (SD)**: Raw statistical measure per spin
-      - **Margin of Error Formula**: MoE = z × SD / √n
-      - **Example**: SD = 2.92 at 10,000 pulls with 95% confidence (z=1.96) → MoE = 1.96 × 2.92 / 100 = 5.73%
-      - Both methods give the same confidence intervals, just different input conventions
+    - **Volatility Index (VI)** and **Standard Deviation (SD)** are the same value
+    - Both represent the standard deviation of returns per spin (expressed as %)
+    - **Margin of Error Formula**: MoE = VI / √n = SD / √n
+    - **Example**: VI = 5.795 at 10,000 pulls → MoE = 5.795 / √10,000 = 5.795 / 100 = 5.795%
+    - **Ranges**: Low (1-5), Medium (5-10), High (10-15+)
+    - The confidence level determines how to interpret the intervals, but does not affect the MoE calculation
     
     ### Statistical Method
-    - **RTP CI**: mean ± z × (SD / √n)
+    - **RTP Confidence Interval**: mean ± (SD / √n)
     - **Hit Rate CI**: p ± z × √(p(1-p)/n)
-    - **z-values**: 95% confidence = 1.96, 99% confidence = 2.576
+    - **Note**: For RTP, the VI/SD represents the full margin of error scaling factor
+    - **For Hit Rates**: Standard proportion confidence interval formula is used with z-score
     - **Assumptions**: Independent spins, n > 30
     
     ### Example Calculation
     Given: RTP = 95.09%, VI = 5.795, n = 10,000 spins, 95% confidence
-    - SD = VI / z = 5.795 / 1.96 = 2.957%
-    - Standard Error = SD / √n = 2.957 / 100 = 0.02957%
-    - Margin of Error = z × SE = 1.96 × 2.957 / 100 = 5.795%
-    - Or directly: MoE = VI / √n = 5.795 / 100 = 5.795%
+    - Margin of Error = VI / √n = 5.795 / 100 = 5.795%
     - Lower CI = 95.09 - 5.795 = 89.295%
     - Upper CI = 95.09 + 5.795 = 100.885%
     """)
