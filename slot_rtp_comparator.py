@@ -50,10 +50,15 @@ def ci_for_mean(rtp_pct: float, sd: float, n: int, z: float) -> Tuple[float, flo
         return (np.nan, np.nan)
     
     # Calculate margin of error: MoE = VI / √n
-    margin_of_error = sd / math.sqrt(n)
+    sqrt_n = math.sqrt(n)
+    margin_of_error = sd / sqrt_n
     
     lo = rtp_pct - margin_of_error
     hi = rtp_pct + margin_of_error
+    
+    # Debug output for first call
+    if n == 10000:
+        print(f"DEBUG ci_for_mean: RTP={rtp_pct}, SD={sd}, n={n}, sqrt(n)={sqrt_n}, MoE={margin_of_error}, CI=[{lo}, {hi}]")
     
     return (max(0.0, lo), min(200.0, hi))
 
@@ -333,13 +338,13 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
         
         if use_vi == "Volatility Index":
             vi = st.number_input(
-                "Volatility Index",
+                "Volatility Index (%)",
                 min_value=0.1, 
                 max_value=50.0, 
                 value=default_vi, 
-                step=0.001,
+                step=0.01,
                 key=f"vi_{game_id}",
-                help="Industry standard: VI already includes z-score. Typical range: Low (1-5), Medium (5-10), High (10-15)",
+                help="Industry standard: VI as percentage. Typical range: Low (1-5%), Medium (5-10%), High (10-15%)",
                 format="%.3f"
             )
             sd_pct = volatility_index_to_sd(vi, rtp_pct, conf)
@@ -352,10 +357,10 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 value=volatility_index_to_sd(default_vi, default_rtp, conf), 
                 step=0.1,
                 key=f"sd_{game_id}",
-                help="Standard deviation per spin (same as Volatility Index)"
+                help="Standard deviation per spin as percentage (same as Volatility Index)"
             )
             vi = sd_to_volatility_index(sd_pct, conf)
-            st.caption(f"📊 Volatility Index: {vi:.3f} (VI and SD are equivalent)")
+            st.caption(f"📊 Volatility Index: {vi:.3f}% (VI and SD are equivalent)")
         
         if vi > 15:
             st.warning("⚠️ Very high volatility")
@@ -393,6 +398,9 @@ tab1, tab2 = st.tabs(["📊 RTP Analysis", "🎯 Hit Rate Analysis"])
 
 with tab1:
     st.header("RTP Statistical Analysis")
+    
+    # Debug: Check what values are being passed
+    st.write(f"🔍 Creating tables with: RTP_A={rtpA}%, SD_A={sdA}%, RTP_B={rtpB}%, SD_B={sdB}%")
     
     tableA = ci_table(nameA, rtpA, sdA, pulls, z)
     tableB = ci_table(nameB, rtpB, sdB, pulls, z)
