@@ -21,17 +21,19 @@ SE_RANGE_MULTIPLIER = 5
 def volatility_index_to_sd(vi: float, rtp: float, conf_level: float) -> float:
     """
     Convert Volatility Index to Standard Deviation per spin.
-    Volatility Index represents the standard deviation directly.
-    Margin of Error = VI / sqrt(n)
+    Volatility Index already includes z-score for the confidence level.
+    VI = z × SD, so SD = VI / z
     """
-    return vi
+    z = CONF_TO_Z[conf_level]
+    return vi / z
 
 def sd_to_volatility_index(sd: float, conf_level: float) -> float:
     """
     Convert Standard Deviation per spin to Volatility Index.
-    They are the same value - just different naming conventions.
+    VI = z × SD
     """
-    return sd
+    z = CONF_TO_Z[conf_level]
+    return z * sd
 
 def normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
     """Calculate normal probability density function."""
@@ -40,14 +42,15 @@ def normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
     c = 1.0 / (sigma * math.sqrt(2.0 * math.pi))
     return c * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
 
-def ci_for_mean(rtp_pct: float, volatility: float, n: int, z: float) -> Tuple[float, float]:
+def ci_for_mean(rtp_pct: float, sd: float, n: int, z: float) -> Tuple[float, float]:
     """
     Calculate confidence interval for mean RTP.
-    Volatility already includes the z-score, so margin of error = volatility / sqrt(n)
+    sd parameter is the raw standard deviation (not VI).
+    Margin of error = z × (sd / sqrt(n))
     """
-    if n <= 0 or volatility < 0:
+    if n <= 0 or sd < 0:
         return (np.nan, np.nan)
-    margin_of_error = volatility / math.sqrt(n)
+    margin_of_error = z * sd / math.sqrt(n)
     lo = rtp_pct - margin_of_error
     hi = rtp_pct + margin_of_error
     return (max(0.0, lo), min(200.0, hi))
@@ -67,18 +70,13 @@ def cis_overlap(ci1: Tuple[float, float], ci2: Tuple[float, float]) -> bool:
         return False
     return ci1[0] <= ci2[1] and ci2[0] <= ci1[1]
 
-def sample_size_for_separation(rtp1: float, vol1: float, rtp2: float, vol2: float, z: float) -> int:
-    """
-    Estimate sample size needed for CIs to not overlap.
-    Volatility already includes z-score.
-    """
+def sample_size_for_separation(rtp1: float, sd1: float, rtp2: float, sd2: float, z: float) -> int:
+    """Estimate sample size needed for CIs to not overlap (conservative estimate)."""
     diff = abs(rtp1 - rtp2)
     if diff < 0.001:
         return np.inf
-    # Need: (vol1 + vol2) / sqrt(n) < diff
-    # So: sqrt(n) > (vol1 + vol2) / diff
-    combined_vol = vol1 + vol2
-    n = ((combined_vol) / diff) ** 2
+    combined_sd = math.sqrt(sd1**2 + sd2**2)
+    n = ((z * combined_sd) / diff) ** 2
     return int(np.ceil(n)) if not np.isinf(n) else np.inf
 
 def sample_size_for_hitrate_separation(hr1: float, hr2: float, z: float) -> int:
@@ -90,17 +88,15 @@ def sample_size_for_hitrate_separation(hr1: float, hr2: float, z: float) -> int:
     n = ((z * combined_sd) / diff) ** 2
     return int(np.ceil(n)) if not np.isinf(n) else np.inf
 
-def ci_table(name: str, rtp_pct: float, volatility: float, pulls: List[int], z: float) -> pd.DataFrame:
+def ci_table(name: str, rtp_pct: float, sd_pct_per_spin: float, pulls: List[int], z: float) -> pd.DataFrame:
     """Generate confidence interval table for given parameters."""
     rows = []
     for n in sorted(set(int(x) for x in pulls if x and x > 0)):
-        lo, hi = ci_for_mean(rtp_pct, volatility, n, z)
-        margin = volatility / math.sqrt(n)
+        lo, hi = ci_for_mean(rtp_pct, sd_pct_per_spin, n, z)
         rows.append({
             "Game": name,
             "Pulls": n,
             "RTP %": rtp_pct,
-            "Margin of Error %": margin,
             "CI Low %": lo,
             "CI High %": hi,
             "CI Width %": hi - lo
@@ -122,30 +118,29 @@ def hitrate_table(name: str, hit_rate: float, pulls: List[int], z: float) -> pd.
         })
     return pd.DataFrame(rows)
 
-def plot_comparison(ax, rtp1: float, vol1: float, rtp2: float, vol2: float, 
+def plot_comparison(ax, rtp1: float, sd1: float, rtp2: float, sd2: float, 
                    n: int, name1: str, name2: str, z: float):
     """Plot overlaid sampling distributions for both games."""
-    if n <= 0 or vol1 <= 0 or vol2 <= 0:
+    if n <= 0 or sd1 <= 0 or sd2 <= 0:
         ax.text(0.5, 0.5, "Insufficient parameters", ha="center", va="center", 
                 transform=ax.transAxes)
         return
     
-    # Margin of error = volatility / sqrt(n)
-    moe1 = vol1 / math.sqrt(n)
-    moe2 = vol2 / math.sqrt(n)
+    se1 = sd1 / math.sqrt(n)
+    se2 = sd2 / math.sqrt(n)
     
-    min_val = min(rtp1 - 3*moe1, rtp2 - 3*moe2)
-    max_val = max(rtp1 + 3*moe1, rtp2 + 3*moe2)
+    min_val = min(rtp1 - SE_RANGE_MULTIPLIER * se1, rtp2 - SE_RANGE_MULTIPLIER * se2)
+    max_val = max(rtp1 + SE_RANGE_MULTIPLIER * se1, rtp2 + SE_RANGE_MULTIPLIER * se2)
     xs = np.linspace(min_val, max_val, PLOT_POINTS)
     
-    ys1 = normal_pdf(xs, rtp1, moe1)
-    ys2 = normal_pdf(xs, rtp2, moe2)
+    ys1 = normal_pdf(xs, rtp1, se1)
+    ys2 = normal_pdf(xs, rtp2, se2)
     
     ax.plot(xs, ys1, label=f"{name1}", color='#1f77b4', linewidth=2)
     ax.plot(xs, ys2, label=f"{name2}", color='#ff7f0e', linewidth=2)
     
-    lo1, hi1 = ci_for_mean(rtp1, vol1, n, z)
-    lo2, hi2 = ci_for_mean(rtp2, vol2, n, z)
+    lo1, hi1 = ci_for_mean(rtp1, sd1, n, z)
+    lo2, hi2 = ci_for_mean(rtp2, sd2, n, z)
     
     ax.axvline(rtp1, color='#1f77b4', linestyle=':', alpha=0.7, label=f'{name1} mean')
     ax.axvspan(lo1, hi1, alpha=0.2, color='#1f77b4')
@@ -330,7 +325,7 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
             "Choose input type",
             ["Volatility Index", "Standard Deviation"],
             key=f"vol_type_{game_id}",
-            help="Volatility Index is industry standard (typically 1-15)"
+            help="Volatility Index already includes z-score; SD is raw statistical measure"
         )
         
         if use_vi == "Volatility Index":
@@ -341,11 +336,11 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 value=default_vi, 
                 step=0.001,
                 key=f"vi_{game_id}",
-                help="Typical range: Low (1-5), Medium (5-10), High (10-15)",
+                help="Industry standard: VI already includes z-score. Typical range: Low (1-5), Medium (5-10), High (10-15)",
                 format="%.3f"
             )
             sd_pct = volatility_index_to_sd(vi, rtp_pct, conf)
-            st.caption(f"📊 Volatility = SD (same value): {sd_pct:.3f}%")
+            st.caption(f"📊 Calculated SD per spin: {sd_pct:.3f}% (VI = {z:.3f} × SD)")
         else:
             sd_pct = st.number_input(
                 "Standard Deviation per spin (%)",
@@ -354,10 +349,10 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
                 value=volatility_index_to_sd(default_vi, default_rtp, conf), 
                 step=0.1,
                 key=f"sd_{game_id}",
-                help="Raw statistical standard deviation per spin"
+                help="Raw statistical standard deviation per spin (without z-score)"
             )
             vi = sd_to_volatility_index(sd_pct, conf)
-            st.caption(f"📊 Calculated Volatility Index: {vi:.3f}")
+            st.caption(f"📊 Calculated Volatility Index: {vi:.3f} (VI = {z:.3f} × SD)")
         
         if vi > 15:
             st.warning("⚠️ Very high volatility")
@@ -580,19 +575,31 @@ with st.expander("📖 Methodology & Concepts"):
     - **Hold %**: House edge = 100% - RTP
     - Example: RTP 95.08% = Hold 4.92%
     
-    ### Volatility Index
-    - **Definition**: Pre-calculated standard deviation that already includes the z-score for the confidence level
-    - **Margin of Error Formula**: MoE = Volatility / √n (NO z-score multiplication needed!)
-    - **Example**: Volatility = 5.73 at 10,000 pulls → MoE = 5.73 / √10,000 = 5.73 / 100 = 0.0573 = 5.73%
-    - **Confidence Interval**: RTP ± MoE (e.g., 95.08% ± 5.73% = [89.35%, 100.81%])
-    - **Low**: VI = 1-5 (frequent small wins)
-    - **Medium**: VI = 5-10 (balanced)
-    - **High**: VI = 10-15+ (rare big wins)
+    ### Volatility Index vs Standard Deviation
+    - **Volatility Index (VI)**: Industry standard that includes the z-score
+      - VI = z × SD (e.g., for 95% confidence: VI = 1.96 × SD)
+      - **Margin of Error Formula**: MoE = VI / √n
+      - **Example**: VI = 5.73 at 10,000 pulls → MoE = 5.73 / √10,000 = 5.73 / 100 = 5.73%
+      - **Ranges**: Low (1-5), Medium (5-10), High (10-15+)
+    - **Standard Deviation (SD)**: Raw statistical measure per spin
+      - **Margin of Error Formula**: MoE = z × SD / √n
+      - **Example**: SD = 2.92 at 10,000 pulls with 95% confidence (z=1.96) → MoE = 1.96 × 2.92 / 100 = 5.73%
+      - Both methods give the same confidence intervals, just different input conventions
     
     ### Statistical Method
-    - **RTP CI**: RTP ± (Volatility / √n)  [Volatility already includes z-score]
-    - **Hit Rate CI**: p ± z × √(p(1-p)/n)  [Uses z-score separately]
+    - **RTP CI**: mean ± z × (SD / √n)
+    - **Hit Rate CI**: p ± z × √(p(1-p)/n)
+    - **z-values**: 95% confidence = 1.96, 99% confidence = 2.576
     - **Assumptions**: Independent spins, n > 30
+    
+    ### Example Calculation
+    Given: RTP = 95.09%, VI = 5.795, n = 10,000 spins, 95% confidence
+    - SD = VI / z = 5.795 / 1.96 = 2.957%
+    - Standard Error = SD / √n = 2.957 / 100 = 0.02957%
+    - Margin of Error = z × SE = 1.96 × 2.957 / 100 = 5.795%
+    - Or directly: MoE = VI / √n = 5.795 / 100 = 5.795%
+    - Lower CI = 95.09 - 5.795 = 89.295%
+    - Upper CI = 95.09 + 5.795 = 100.885%
     """)
 
 with st.expander("💭 Example Use Cases"):
@@ -600,5 +607,6 @@ with st.expander("💭 Example Use Cases"):
     - **Casino Operators**: Verify measured RTP matches theoretical values
     - **Regulators**: Determine appropriate testing sample sizes
     - **Game Developers**: Design volatility profiles and understand precision
-    - **Comparison**: Evaluate statistical significance of differences
+    - **Comparison**: Evaluate statistical significance of differences between games
+    - **Quality Assurance**: Ensure games operate within acceptable variance ranges
     """)
