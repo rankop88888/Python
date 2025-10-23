@@ -42,23 +42,20 @@ def normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
 def ci_for_mean(rtp_pct: float, sd: float, n: int, z: float) -> Tuple[float, float]:
     """
     Calculate confidence interval for mean RTP.
-    For slot machines: Margin of error = sd / sqrt(n)
-    The sd parameter is the Volatility Index or Standard Deviation (they are the same).
-    Note: z parameter kept for compatibility but not used in slot RTP calculations.
+    For slot machines: Margin of error = (sd * 100) / sqrt(n)
+    The sd parameter is entered as a percentage (e.g., 5.73 for 5.73%)
+    but represents a decimal in the calculation (0.0573).
     """
     if n <= 0 or sd < 0:
         return (np.nan, np.nan)
     
-    # Calculate margin of error: MoE = VI / √n
+    # Convert SD from percentage input to calculation:
+    # MoE = (SD × 100) / √n = SD / √(n/10000)
     sqrt_n = math.sqrt(n)
-    margin_of_error = sd / sqrt_n
+    margin_of_error = (sd * 100) / sqrt_n
     
     lo = rtp_pct - margin_of_error
     hi = rtp_pct + margin_of_error
-    
-    # Debug output for first call
-    if n == 10000:
-        print(f"DEBUG ci_for_mean: RTP={rtp_pct}, SD={sd}, n={n}, sqrt(n)={sqrt_n}, MoE={margin_of_error}, CI=[{lo}, {hi}]")
     
     return (max(0.0, lo), min(200.0, hi))
 
@@ -374,10 +371,6 @@ def game_input_block(col, game_id: str, default_name: str, default_rtp: float, d
 nameA, rtpA, sdA, hrA = game_input_block(colA, "A", "Game A", 95.08, 5.73, 25.0)
 nameB, rtpB, sdB, hrB = game_input_block(colB, "B", "Game B", 95.08, 5.73, 25.0)
 
-# Debug output
-st.write(f"Debug - Game A: RTP={rtpA}%, SD={sdA}%")
-st.write(f"Debug - Game B: RTP={rtpB}%, SD={sdB}%")
-
 if sdA <= 0 or sdB <= 0:
     st.error("❌ Volatility/SD must be greater than 0")
     st.stop()
@@ -398,9 +391,6 @@ tab1, tab2 = st.tabs(["📊 RTP Analysis", "🎯 Hit Rate Analysis"])
 
 with tab1:
     st.header("RTP Statistical Analysis")
-    
-    # Debug: Check what values are being passed
-    st.write(f"🔍 Creating tables with: RTP_A={rtpA}%, SD_A={sdA}%, RTP_B={rtpB}%, SD_B={sdB}%")
     
     tableA = ci_table(nameA, rtpA, sdA, pulls, z)
     tableB = ci_table(nameB, rtpB, sdB, pulls, z)
