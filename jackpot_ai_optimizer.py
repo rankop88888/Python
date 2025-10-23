@@ -1,15 +1,6 @@
-# Prepare the corrected and enhanced Streamlit script with:
-# - Increment % input as true percentage
-# - Explanation and use of Trigger Value
-# - Validations
-# - Estimated payouts
-# - Cleaned display
-
-updated_script = """
 import streamlit as st
 import pandas as pd
 import json
-from pathlib import Path
 
 st.set_page_config(page_title="Mystery Jackpot AI Planner", layout="wide")
 st.title("Mystery Jackpot Planner with DeepSeek AI Optimization")
@@ -130,8 +121,8 @@ Guidelines:
 
 Output JSON Example:
 [
-  {{ "Level": 1, "Recommended Increment Ratio": 0.07 }},
-  {{ "Level": 2, "Recommended Increment Ratio": 0.05 }}
+  {{"Level": 1, "Recommended Increment Ratio": 0.07}},
+  {{"Level": 2, "Recommended Increment Ratio": 0.05}}
 ]
 '''
 
@@ -146,13 +137,11 @@ if not error_flag and st.button("Request AI Suggestion (DeepSeek R1)"):
     st.code(prompt, language="markdown")
 
     # Placeholder for DeepSeek integration
-    ai_output = '''
-    [
-      { "Level": 1, "Recommended Increment Ratio": 0.08 },
-      { "Level": 2, "Recommended Increment Ratio": 0.06 },
-      { "Level": 3, "Recommended Increment Ratio": 0.05 }
-    ]
-    '''
+    ai_output = '''[
+  {"Level": 1, "Recommended Increment Ratio": 0.08},
+  {"Level": 2, "Recommended Increment Ratio": 0.06},
+  {"Level": 3, "Recommended Increment Ratio": 0.05}
+]'''
 
     st.text("AI Suggested Increment Ratios:")
     st.code(ai_output, language="json")
@@ -167,10 +156,3 @@ if not error_flag and st.button("Request AI Suggestion (DeepSeek R1)"):
         st.dataframe(df, use_container_width=True)
     except Exception as e:
         st.error(f"Failed to parse AI output: {e}")
-"""
-
-# Save the updated script to file
-final_script_path = Path("/mnt/data/jackpot_ai_optimizer.py")
-final_script_path.write_text(updated_script)
-
-final_script_path.name
