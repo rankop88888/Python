@@ -76,10 +76,10 @@ for level in range(1, num_levels + 1):
         
         if jackpot_type == "Standard Multi-Level Progressive":
             trigger_value = st.number_input(f"L{level} Trigger Value (€)", 
-                                          value=(min_value + max_value) / 2, 
-                                          key=f"trigger_{level}", 
-                                          min_value=1,
-                                          help="Turnover needed for 1 JP hit")
+                              value=float((min_value + max_value) / 2), 
+                              key=f"trigger_{level}", 
+                              min_value=1.0,  # Changed from 1 to 1.0
+                              help="Turnover needed for 1 JP hit")
         else:
             trigger_value = None
     
